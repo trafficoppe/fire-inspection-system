@@ -1,0 +1,86 @@
+@import url("https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&display=swap");
+
+/* บังคับฟอนต์ Anuphan ทั้งระบบ */
+* {
+  font-family: "Anuphan", sans-serif !important;
+}
+
+body {
+  background-color: #f0f3f6 !important; /* สีพื้นหลังเทาอ่อนตามภาพ */
+  color: #333333;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* =========================================
+   สไตล์สำหรับหน้า Index (หน้าเมนูหลัก)
+========================================= */
+.main-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  padding: 2rem 1.5rem;
+  max-width: 600px;
+  margin: 2rem auto;
+}
+
+.card-menu {
+  background-color: #fcfcfc;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  padding: 12px 15px;
+  text-align: center;
+  transition: all 0.2s ease;
+  color: #2b3a4a;
+  display: block;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.05rem;
+}
+
+.card-menu:hover, .card-menu:active {
+  background-color: #f0f3f6;
+  border-color: #c0c0c0;
+  transform: scale(0.99);
+  color: #2b3a4a;
+}
+
+/* =========================================
+   ปรับ Navbar ทุกหน้าให้เป็นธีมสว่าง สะอาดตา
+========================================= */
+.navbar-custom, .bg-danger {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+}
+
+.navbar-brand {
+  color: #2b3a4a !important;
+  font-weight: 600 !important;
+}
+
+.navbar .btn-outline-light {
+  color: #555 !important;
+  border-color: #ddd !important;
+  background: #fff;
+}
+
+.navbar .btn-outline-light:hover {
+  background: #f8f9fa !important;
+  color: #000 !important;
+}
+
+/* =========================================
+   สไตล์อื่นๆ ที่มีอยู่เดิม (ปรับให้เข้ากับธีม)
+========================================= */
+.card-custom { 
+  border: 1px solid #eee; 
+  border-radius: 12px; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
+}
+.extinguisher-item { cursor: pointer; border-radius: 10px; background: #ffffff; transition: transform 0.1s; border: 1px solid #eee; }
+.extinguisher-item:active { transform: scale(0.98); background: #f8f9fa; }
+.btn-primary, .btn-danger {
+    background-color: #2b4c65 !important; /* ใช้โทนสีกรมท่า/เขียวเข้มให้เข้ากับโลโก้ */
+    border-color: #2b4c65 !important;
+    color: #ffffff !important;
+}
