@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@400;600&display=swap');
+/* UI tokens from unified-waste-app/app.css; document typography stays Sarabun. */
+:root { --primary:#1e5631; --secondary:#4c9a2a; --bg:#f4f7f6; --ink:#333; --muted:#737d76; --line:#e0e6e2; }
+@media screen {
+ body { background:var(--bg); padding:0; color:var(--ink); }
+ .report-masthead { min-height:66px; display:flex; align-items:center; justify-content:space-between; gap:16px; background:#fff; border-bottom:1px solid var(--line); padding:12px 24px; font-family:Anuphan,Tahoma,sans-serif; }
+ .report-masthead img { width:210px; max-width:55vw; height:auto; display:block; }
+ .back-link { color:var(--primary); font-size:14px; text-decoration:none; }
+ .report-heading { max-width:1050px; margin:28px auto 20px; padding:0 20px; font-family:Anuphan,Tahoma,sans-serif; }
+ .report-heading p { margin:6px 0; color:var(--muted); font-size:14px; }
+ .report-heading h1 { margin:6px 0; font-size:27px; color:var(--primary); font-weight:600; }
+ .toolbar { max-width:1010px; margin:0 auto 24px; border:1px solid var(--line); border-radius:14px; box-shadow:0 4px 18px #10271909; font-family:Anuphan,Tahoma,sans-serif; display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:20px; color:var(--ink); }
+ .toolbar label { font-size:14px; }
+ .toolbar input,.toolbar select { font-family:Anuphan,Tahoma,sans-serif!important; font-size:14px!important; padding:10px!important; border:1px solid #c7d6cb!important; border-radius:7px!important; background:#fff; max-width:100%; color:var(--ink); }
+ .toolbar button { font:600 14px Anuphan,Tahoma,sans-serif; background:var(--primary); color:#fff; border:0; border-radius:7px; padding:11px 16px; cursor:pointer; }
+ .toolbar button:hover:not(:disabled) { background:#174426; }
+ .toolbar button:disabled { background:#dce5df; color:#6c7a70; cursor:not-allowed; }
+ .toolbar p { flex-basis:100%; margin:2px 0; font-size:13px; color:var(--muted); }
+ #reportStatus { color:var(--primary); font-weight:600; }
+ :focus-visible { outline:3px solid #4c9a2a; outline-offset:3px; }
+ .document-scroll { overflow-x:auto; padding:0 16px 24px; }
+ .page { border:1px solid var(--line); box-shadow:0 6px 28px #10271912; }
+ @media(max-width:600px){.toolbar{margin:0 12px 20px;padding:16px}.toolbar label{flex-basis:100%}.toolbar select{width:100%}.report-heading{margin-top:20px}.report-heading h1{font-size:24px}.report-masthead{padding:12px 16px}.document-scroll .page{margin-left:0;}}
+}
+@media print { .document-scroll{overflow:visible;padding:0;} }
+
+@media screen{.toolbar{margin-top:24px;gap:16px}.toolbar button{background:#dcebc9;color:#203019;border:1px solid #b3cb94;min-height:44px}.toolbar button:hover:not(:disabled){background:#cce1b2}.toolbar #reportStatus[hidden]{display:none}.toolbar #reportStatus:not([hidden]){color:#a32920}}
+
+@media screen{.toolbar button{background:#fff;color:#203019;border:1px solid #9cb886}.toolbar button:hover:not(:disabled){background:#f6f9f2}.toolbar button:active:not(:disabled),.toolbar button[aria-pressed=true]{background:#46752d;color:#fff;border-color:#46752d}}
+
+/* Internal report totals remain available to JS, not printed or displayed. */
+.page [hidden]{display:none!important}
+
+/* Fire Alarm results are entered manually, never inferred from extinguisher checks. */
+#fireAlarmTable{table-layout:fixed;width:100%}
+#fireAlarmTable th,#fireAlarmTable td{font-size:16pt!important;overflow-wrap:anywhere}
+#fireAlarmTable th:first-child{width:19%;text-align:left}
+#fireAlarmTable .alarm-result{width:100%;min-width:0;border:1px solid #b8cdb4;border-radius:4px;background:#fff;color:#172519;font-family:inherit;font-size:11pt!important;padding:3px 0}
+#fireAlarmTable .alarm-print-result{display:none}
+@media print{#fireAlarmTable .alarm-result{display:none!important}#fireAlarmTable .alarm-print-result{display:inline!important}}
+
+#fireAlarmTable .alarm-saved-result{font-size:16pt!important}#fireAlarmTable tr[hidden]{display:none!important}
+
+.page .table-title{margin-left:0!important;text-indent:0!important;text-align:left!important;font-weight:bold!important;margin-bottom:8px}
+#alarmReportStatus:empty{display:none}
+
+/* Keep the closing Thai word with the preceding phrase, without changing document font size. */
+.page .intro-compact{letter-spacing:-0.2px;word-spacing:-0.35px}
+.page .intro-ending{white-space:nowrap}
+
+/* Full-width Thai paragraphs: fill both margins and let the browser wrap naturally. */
+.page .indent-para{width:100%;box-sizing:border-box;text-align:justify;text-justify:inter-character;white-space:normal;word-break:normal;overflow-wrap:normal;text-wrap:pretty;letter-spacing:-0.15px}
+.page .intro-compact{letter-spacing:-0.2px;word-spacing:-0.35px}

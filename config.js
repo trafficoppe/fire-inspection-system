@@ -3,8 +3,11 @@
 // ==========================================
 
 const CONFIG = {
+    // เปิดเป็น true เฉพาะหลังตรวจว่า Apps Script รองรับบันทึกวันที่เลือกและส่งการยืนยันกลับ
+    INSPECTION_DATE_WRITE_READY: false,
+
     // 1. ลิงก์ Web App จาก Google Apps Script (เปลี่ยนที่นี่ที่เดียว)
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbyN92CTq3Qua6SYie4MbWGtRqhxcLoInEooEJutz7tdlksNOShO_VC1wv5i2gv-njw/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycby6fRJJsptv_n8bh5CN7kn3NOniSjMPdULbBA0wGHBTdyUGgidUtQjIoLRxVoXhNv-y/exec',
     
     // 2. ลิงก์สำหรับโหลดไฟล์ APK (ถ้ามี)
     APK_LINK: 'https://example.com/download/fire-app.apk',
@@ -13,5 +16,5 @@ const CONFIG = {
     APP_NAME: 'ระบบตรวจถังดับเพลิงออนไลน์',
     
     // 4. เวอร์ชันแอปพลิเคชัน
-    VERSION: '1.0.0'
+    VERSION: '1.1.1'
 };

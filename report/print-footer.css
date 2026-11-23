@@ -1,0 +1,21 @@
+@font-face{font-family:FireFooterSarabun;src:url('fonts/THSarabunNew.ttf') format('truetype');font-weight:400;}
+/* CSS paged-media margin boxes: Chrome/Edge 131+ and compatible print engines. */
+@media print {
+ @page {
+  size: A4;
+  margin: 1cm 2cm 1.6cm 3cm;
+  @bottom-right {
+   content: "รหัสเอกสาร (Doc. No.): OPPE-10-F-04-01 | ฉบับที่ (Rev. No.): 00\Aวันที่บังคับใช้ (Effective Date): 20/11/2026 | หน้า " counter(page);
+   white-space: pre;
+   font-family: FireFooterSarabun, 'TH Sarabun New', serif;
+   font-size: 11pt;
+   font-weight: normal;
+   line-height: 1.15;
+   text-align: right;
+   vertical-align: bottom;
+   padding-bottom: 5mm;
+   color: #000;
+  }
+ }
+ .page { min-height:0!important; page-break-after:auto!important; }
+}

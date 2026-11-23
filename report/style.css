@@ -1,0 +1,176 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap'); /* นำเข้าฟอนต์ Sarabun จาก Google Fonts สำหรับใช้งานในเว็บ */
+
+/* =========================================
+   1. ตั้งค่าพื้นฐาน (Body & Page)
+   ========================================= */
+body { 
+  font-family: 'TH Sarabun New', 'Sarabun', sans-serif; 
+  background-color: #525659; 
+  margin: 0; 
+  padding: 20px; 
+}
+
+.page { 
+  background: white; 
+  width: 210mm; 
+  min-height: 297mm; 
+  padding: 1.5cm 2cm 0.5cm 3cm;  
+  margin: 0 auto 20px auto; 
+  box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+  box-sizing: border-box; 
+  color: #000; 
+  position: relative; 
+}
+
+.page, .page * { 
+  font-size: 16pt !important; 
+  line-height: 1.25 !important; 
+  font-weight: 400; 
+}
+
+.page b, .page strong, .page th { 
+  font-weight: bold !important; 
+}
+
+/* =========================================
+   2. แถบเครื่องมือ (Toolbar)
+   ========================================= */
+.toolbar { 
+  background: white; 
+  padding: 15px 20px; 
+  border-radius: 8px; 
+  max-width: 210mm; 
+  margin: 0 auto 20px auto; 
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+}
+
+.print-btn { 
+  background-color: #4CAF50; 
+  color: white; 
+  border: none; 
+  padding: 10px 15px; 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-family: 'TH Sarabun New', 'Sarabun', sans-serif; 
+  font-size: 16pt; 
+  margin-left: 10px; 
+}
+.print-btn:hover { 
+  background-color: #45a049; 
+}
+
+/* =========================================
+   3. การจัดรูปแบบข้อความและตาราง
+   ========================================= */
+.indent-para { 
+  text-indent: 2.5cm; 
+  text-align: justify; 
+  margin-bottom: 5px; 
+  line-height: 1.25; 
+}
+
+.sub-title { 
+  margin-bottom: 2px; 
+}
+
+table.doc-table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  margin-bottom: 8px; 
+  text-align: center; 
+}
+
+table.doc-table th, table.doc-table td { 
+  border: 1px solid #000; 
+  padding: 4px 6px !important; 
+  line-height: 1.15 !important; 
+  vertical-align: middle; 
+}
+
+table.doc-table th { 
+  background-color: #f9f9f9; 
+}
+
+table.doc-table tbody tr:hover td { 
+  background-color: #fce4e4; 
+}
+
+table.doc-table-sec td { 
+    border-color: #000; 
+}
+
+/* =========================================
+   4. ส่วนท้ายกระดาษ (Footer)
+   ========================================= */
+.doc-footer { 
+    width: 100%;
+    text-align: right;
+    font-size: 14pt !important;
+    color: #333;
+    padding: 0;
+}
+
+/* =========================================
+   5. กฎสำหรับตอนสั่งพิมพ์ (PDF)
+   ========================================= */
+@media print { 
+  @page { 
+    size: A4; 
+    margin: 1cm 2cm 0.5cm 3cm; 
+  }
+  
+  body { 
+    background: white; 
+    padding: 0; 
+    margin: 0; 
+  }
+  
+  .no-print { 
+    display: none !important; 
+  }
+  
+  body > br { 
+    display: none !important; 
+  }
+  
+  .page { 
+    box-shadow: none !important; 
+    margin: 0 !important; 
+    padding: 0 !important; 
+    width: 100% !important; 
+    max-width: 100% !important; 
+    min-height: 275mm !important; 
+    position: relative !important; 
+    page-break-after: always; 
+    overflow: visible !important; 
+  }
+  
+  table.doc-table th, table.doc-table td { 
+    padding: 2px 4px !important; 
+    line-height: 1.1 !important; 
+  }
+  
+  .indent-para { margin-bottom: 5px !important; } 
+  table.doc-table { margin-bottom: 10px !important; } 
+  .sub-title { margin-bottom: 2px !important; } 
+  table { page-break-inside: auto; }
+  tr { break-inside: avoid; page-break-inside: avoid; }
+  thead { display: table-header-group; } 
+  
+  .doc-footer {
+      display: none !important;
+  }
+
+  body > .page {
+      border-bottom: 2cm solid transparent !important;
+      box-sizing: border-box !important;
+  }
+}
+/* A blank paragraph gap equals one normal 16pt × 1.25 text line (20pt). */
+.page .indent-para,.page>p{margin-top:0!important;margin-bottom:20pt!important}
+.page table.doc-table{margin-top:0!important;margin-bottom:20pt!important}
+
+/* Hide the complete alarm section for traffic-only reports, including print. */
+#alarmReportSection[hidden]{display:none!important;}
+/* Center the contents of the alarm table without changing its left-aligned title. */
+#fireAlarmTable th,#fireAlarmTable td{text-align:center!important;vertical-align:middle!important;}

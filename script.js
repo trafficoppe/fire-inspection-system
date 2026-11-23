@@ -12,7 +12,41 @@ const DEPT_MAP = {
 };
 
 const DEPT_NAME = DEPT_MAP[deptKey] || 'งานจราจรและความปลอดภัย';
-const CACHE_KEY = "gasData_" + DEPT_NAME;
+const CACHE_KEY = "gasData_folder_and_sheet_photos_v1_17_" + DEPT_NAME;
+
+let renderedRecords = [];
+let selectedRecord = null;
+function assetOf(row) { return String(row['หมายเลขครุภัณฑ์'] || row['เลขที่ถัง'] || ''); }
+function prepareRecords(rows) {
+    const counts = new Map();
+    rows.forEach(row => counts.set(assetOf(row), (counts.get(assetOf(row)) || 0) + 1));
+    return rows.map((row, index) => ({...row,
+        _recordKey: JSON.stringify([index, ...Object.values(row)]),
+        _ambiguousAsset: !assetOf(row) || counts.get(assetOf(row)) > 1
+    }));
+}
+function warnDuplicate() {
+    const message = 'รหัสถังซ้ำในฐานข้อมูล ยังแยกประวัติหรือบันทึกของถังนี้ไม่ได้ กรุณาตรวจรหัสก่อน';
+    if (typeof Swal !== 'undefined') Swal.fire({icon: 'warning', title: 'รหัสถังซ้ำ', text: message});
+    else alert(message);
+}
+function openRecord(index) {
+    selectedRecord = renderedRecords[index];
+    if (!selectedRecord) return;
+    openForm(assetOf(selectedRecord), selectedRecord['สถานที่ติดตั้ง'], '', assetOf(selectedRecord));
+}
+function historyRecord(index) {
+    const row = renderedRecords[index];
+    if (!row || row._ambiguousAsset) return warnDuplicate();
+    showHistoryModal(assetOf(row));
+}
+function refillRecord(index) {
+    const row = renderedRecords[index];
+    if (!row || row._ambiguousAsset) return warnDuplicate();
+    window.location.href = 'refill_form.html?' + new URLSearchParams({
+        dept: deptKey, assetCode: assetOf(row), extId: row['เลขที่ถัง'] || ''
+    });
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     const titleDisplay = document.getElementById('dept-title-display');
@@ -38,10 +72,24 @@ function clearCacheAndReload() {
     loadExtinguishers();
 }
 
+// สร้างวันตามปฏิทินสากลและเขตเวลาไทย โดยไม่ใช้ UTC หรือเขตเวลาเครื่อง
+function todayBangkok(now = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok', calendar: 'gregory', numberingSystem: 'latn',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(now);
+    const part = type => parts.find(p => p.type === type).value;
+    return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
 function openForm(extId, location, imgSrc, assetCode) {
     document.getElementById('extinguisherId').value = extId;
     document.getElementById('extinguisherLocation').value = location;
-    document.getElementById('inspectionDate').valueAsDate = new Date();
+    document.getElementById('inspectionDate').value = todayBangkok();
+    const dateHelp = document.getElementById('inspectionDateHelp');
+    if (dateHelp) dateHelp.textContent = CONFIG.INSPECTION_DATE_WRITE_READY === true
+        ? 'ตั้งเป็นวันนี้ตามเวลาไทย แตะเพื่อเลือกวันอื่นได้'
+        : 'วันนี้บันทึกได้ตามเดิม วันอื่นต้องเปิดการบันทึกวันที่ใน Apps Script ก่อน';
     
     ['pin', 'gauge', 'hose', 'body', 'lever', 'label', 'installPoint', 'base'].forEach(item => {
         const passRadio = document.getElementById(`${item}_pass`);
@@ -102,7 +150,12 @@ async function loadExtinguishers() {
         
         if (allData.error) throw new Error(allData.error);
 
-        const filtered = allData.filter(item => item['หน่วยงาน'] === DEPT_NAME);
+        if(DEPT_NAME!=='งานจราจรและความปลอดภัย'){
+            // Read H/I from the exact inventory row; never borrow another tank's photos.
+            const photoRows=await FireSheet.read('https://docs.google.com/spreadsheets/d/1LD5AVbwLV2RplbUYNlzY529rkN41dgvvqcXzGjBFBW8/export?format=csv&gid=62276880');
+            allData.forEach(item=>{const matches=photoRows.filter(r=>r['หน่วยงาน']===item['หน่วยงาน']&&String(r['หมายเลขครุภัณฑ์']||'').trim()===String(item['หมายเลขครุภัณฑ์']||'').trim()&&String(r['เลขที่ถัง']||'').trim()===String(item['เลขที่ถัง']||'').trim());if(matches.length===1){item['รูปภาพ1']=matches[0]['รูปภาพ1'];item['รูปภาพ2']=matches[0]['รูปภาพ2'];}});
+        }
+        const filtered = prepareRecords(allData).filter(item => item['หน่วยงาน'] === DEPT_NAME);
 
         sessionStorage.setItem(CACHE_KEY, JSON.stringify(filtered));
         renderList(filtered, container, countBadge);
@@ -128,12 +181,12 @@ function renderList(data, container, countBadge) {
         return;
     }
 
-    let inspectedLog = JSON.parse(localStorage.getItem('inspectedLog_' + DEPT_NAME) || '{}');
+    let inspectedLog = JSON.parse(localStorage.getItem('inspectedLog_confirmed_v2_' + DEPT_NAME) || '{}');
     const now = new Date().getTime();
 
     data.sort((a, b) => {
-        const aId = a['หมายเลขครุภัณฑ์'] || a['เลขที่ถัง'];
-        const bId = b['หมายเลขครุภัณฑ์'] || b['เลขที่ถัง'];
+        const aId = a._recordKey;
+        const bId = b._recordKey;
         const aInspected = inspectedLog[aId] && (now - inspectedLog[aId].timestamp < 10 * 60 * 1000) ? 1 : 0;
         const bInspected = inspectedLog[bId] && (now - inspectedLog[bId].timestamp < 10 * 60 * 1000) ? 1 : 0;
         return aInspected - bInspected;
@@ -142,49 +195,37 @@ function renderList(data, container, countBadge) {
     container.innerHTML = '';
     countBadge.innerText = `${data.length} ถัง`;
 
-    data.forEach(ext => {
+    renderedRecords = data.slice();
+    data.forEach((ext, recordIndex) => {
+        const recordKey = ext._recordKey;
         const assetCode = ext['หมายเลขครุภัณฑ์'] || ext['เลขที่ถัง'];
-        let borderClass = "border-start border-4"; 
-        let cardStyle = "background-color: #ffffff; border-left-color: #2b4c65 !important;"; 
+        let borderClass = ""; 
+        let cardStyle = "background-color: #ffffff;"; 
         let statusBadge = "";
 
-        if (inspectedLog[assetCode]) {
-            const timeDiff = now - inspectedLog[assetCode].timestamp;
+        if (inspectedLog[recordKey]) {
+            const timeDiff = now - inspectedLog[recordKey].timestamp;
             if (timeDiff < 10 * 60 * 1000) { 
-                if (inspectedLog[assetCode].status === 'pass') {
-                    cardStyle = "background-color: #d1e7dd !important; border-left-color: #198754 !important;";
+                if (inspectedLog[recordKey].status === 'pass') {
+                    cardStyle = "background-color: #d1e7dd !important;";
                     statusBadge = `<span class="badge bg-success ms-1 px-2 py-1 fw-normal rounded-pill" style="font-size: 10px;">ตรวจแล้ว</span>`;
                 } else {
-                    cardStyle = "background-color: #f8d7da !important; border-left-color: #dc3545 !important;";
+                    cardStyle = "background-color: #f8d7da !important;";
                     statusBadge = `<span class="badge ms-1 px-2 py-1 fw-normal rounded-pill" style="background-color: #dc3545; color: white; font-size: 10px;">ชำรุด</span>`;
                 }
             } else {
-                delete inspectedLog[assetCode];
+                delete inspectedLog[recordKey];
             }
         }
 
-        let img1Src = (assetCode && assetCode !== '-') ? `images/${assetCode}_1.jpg` : `images/default.jpg`;
-        let img2Src = (assetCode && assetCode !== '-') ? `images/${assetCode}_2.jpg` : `images/default.jpg`;
-
-        let carouselId = "slide-" + (assetCode || Math.random().toString(36).substr(2, 5));
-        let imageBlockHTML = `
-          <div id="${carouselId}" class="carousel slide me-2 flex-shrink-0" data-bs-ride="carousel" data-bs-interval="2500" 
-               style="width: 80px; height: 80px; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">
-            <div class="carousel-inner" style="height: 100%;">
-              <div class="carousel-item active" style="height: 100%; transition: transform 0.8s ease-in-out;">
-                <img src="${img1Src}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='images/default.jpg';">
-              </div>
-              <div class="carousel-item" style="height: 100%; transition: transform 0.8s ease-in-out;">
-                <img src="${img2Src}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='images/default.jpg';">
-              </div>
-            </div>
-          </div>
-        `;
+        // ใช้โฟลเดอร์ images ตามรหัสครุภัณฑ์ที่ไม่ซ้ำ ห้าม fallback ไปเลขถัง
+        
+        const imageBlockHTML = getFireExtinguisherImageBlock(ext);
 
         container.innerHTML += `
             <div class="card mb-2 shadow-sm border-0 ${borderClass} cursor-pointer" 
                  style="${cardStyle}"
-                 onclick="openForm('${assetCode}', '${ext['สถานที่ติดตั้ง']}', '${img1Src}', '${assetCode}')">
+                 onclick="openRecord(${recordIndex})" role="button" tabindex="0" aria-label="ตรวจสภาพถัง ${escapePhotoAttribute(assetCode)}" onkeydown="if(event.target===this &amp;&amp; (event.key==='Enter' || event.key===' ')){event.preventDefault();openRecord(${recordIndex});}">
                 
                 <div class="card-body p-2 d-flex align-items-center">
                     
@@ -194,9 +235,10 @@ function renderList(data, container, countBadge) {
                         
                         <div class="d-flex justify-content-between align-items-start mb-1">
                             <div class="text-start mb-0" style="line-height: 1.35;">
-                                <div style="font-size: 11px; color: #000; font-weight: normal;">ชนิด ${ext['ชนิด']}</div>
-                                <div style="font-size: 11px; color: #000; font-weight: normal;">ขนาด ${ext['ขนาด']}</div>
-                                <div style="font-size: 11px; color: #000; font-weight: normal;">ถังเลขที่ ${ext['เลขที่ถัง'] || '-'}</div>
+                                <div style="font-size: 11px; color: #000; font-weight: normal;">ชนิด ${escapePhotoAttribute(ext['ชนิด'] || '-')}</div>
+                                <div style="font-size: 11px; color: #000; font-weight: normal;">ขนาด ${escapePhotoAttribute(ext['ขนาด'] || '-')}</div>
+                                <div style="font-size: 11px;">ครุภัณฑ์ ${escapePhotoAttribute(assetCode)} · จุดติดตั้ง ${escapePhotoAttribute(ext['สถานที่ติดตั้ง'] || '-')}</div>
+                                <div style="font-size: 11px; color: #000; font-weight: normal;">ถังเลขที่ ${escapePhotoAttribute(ext['เลขที่ถัง'] || '-')}</div>
                             </div>
                             <div class="flex-shrink-0 ms-1">
                                 ${statusBadge}
@@ -206,11 +248,11 @@ function renderList(data, container, countBadge) {
                         <!-- ปรับแก้ปุ่มสีเหลืองและปุ่มสีเทาตามภาพตัวอย่าง -->
                         <div class="text-end d-flex justify-content-end gap-2 mt-auto pt-1">
                             <button class="btn btn-sm rounded-pill px-3 py-1 fw-bold shadow-sm" style="color: #333; font-size: 11px; background-color: #ffca28; border: none;"
-                                onclick="event.stopPropagation(); window.location.href='refill_form.html?dept=${deptKey}&assetCode=${assetCode}&extId=${ext['เลขที่ถัง'] || ''}';">
+                                onclick="event.stopPropagation(); refillRecord(${recordIndex})">
                                 เติมน้ำยา
                             </button>
                             <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" style="font-size: 11px; color: #555; background-color: #f8f9fa;"
-                                    onclick="event.stopPropagation(); showHistoryModal('${assetCode}')">
+                                    onclick="event.stopPropagation(); historyRecord(${recordIndex})">
                                 ประวัติการตรวจ
                             </button>
                         </div>
@@ -221,7 +263,7 @@ function renderList(data, container, countBadge) {
         `;
     });
 
-    localStorage.setItem('inspectedLog_' + DEPT_NAME, JSON.stringify(inspectedLog));
+    localStorage.setItem('inspectedLog_confirmed_v2_' + DEPT_NAME, JSON.stringify(inspectedLog));
 
     const carousels = document.querySelectorAll('.carousel');
     carousels.forEach(carousel => {
@@ -236,10 +278,22 @@ function setupForm() {
     const form = document.getElementById('inspection-form');
     if (!form) return;
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!selectedRecord || selectedRecord._ambiguousAsset) { warnDuplicate(); return; }
+        const recordKey = selectedRecord._recordKey;
 
         const submitBtn = form.querySelector('button[type="submit"]');
+        const dateInput = document.getElementById('inspectionDate');
+        if (!dateInput.reportValidity()) return;
+        const inspectionDate = dateInput.value;
+        const dateWriteReady = CONFIG.INSPECTION_DATE_WRITE_READY === true;
+        if (!dateWriteReady && inspectionDate !== todayBangkok()) {
+            const message = 'ระบบยังบันทึกวันที่อื่นไม่ได้ จึงยังไม่ได้ส่งข้อมูล กรุณาเลือกวันนี้หรือแจ้งผู้ดูแล';
+            if (typeof Swal !== 'undefined') await Swal.fire({icon:'warning',title:'ยังไม่ได้ส่งข้อมูล',text:message});
+            else alert(message);
+            return;
+        }
         submitBtn.disabled = true; // ป้องกันการกดปุ่มซ้ำ
 
         const assetCode = document.getElementById('extinguisherId').value;
@@ -265,7 +319,8 @@ function setupForm() {
         const formatCheck = (status, reason) => status === 'pass' ? 'ปกติ' : 'ชำรุด: ' + reason;
 
         const payload = {
-            action: "inspection",
+            action: dateWriteReady ? "inspection_with_date" : "inspection",
+            ...(dateWriteReady ? {inspectionDate} : {}),
             extinguisherId: assetCode,
             assetCode: assetCode,
             inspectorName: document.getElementById('inspectorName').value,
@@ -282,21 +337,25 @@ function setupForm() {
             department: DEPT_NAME
         };
 
-        // 1. สั่งส่งข้อมูลไป Google Sheets เบื้องหลังแบบไม่ต้องรอ (ไม่มี await)
-        fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).catch(err => console.error("Send error:", err));
+        try {
+            const receipt = await FireSubmit.send(CONFIG.GAS_URL, payload);
+            if (dateWriteReady && receipt.inspectionDate !== inspectionDate) {
+                throw new Error('ระบบยังไม่ยืนยันวันที่ตรวจที่เลือก กรุณาตรวจประวัติก่อนส่งซ้ำ');
+            }
+        } catch (error) {
+            submitBtn.disabled = false;
+            if (typeof Swal !== 'undefined') await Swal.fire({icon:'warning',title:'ยังไม่ยืนยันการบันทึก',text:error.message});
+            else alert(error.message);
+            return;
+        }
 
         // 2. อัปเดตสถานะการ์ดให้เป็น "ตรวจแล้ว" ในเครื่องทันที
-        let inspectedLog = JSON.parse(localStorage.getItem('inspectedLog_' + DEPT_NAME) || '{}');
-        inspectedLog[assetCode] = {
+        let inspectedLog = JSON.parse(localStorage.getItem('inspectedLog_confirmed_v2_' + DEPT_NAME) || '{}');
+        inspectedLog[recordKey] = {
             timestamp: new Date().getTime(),
             status: isAllPass ? 'pass' : 'fail'
         };
-        localStorage.setItem('inspectedLog_' + DEPT_NAME, JSON.stringify(inspectedLog));
+        localStorage.setItem('inspectedLog_confirmed_v2_' + DEPT_NAME, JSON.stringify(inspectedLog));
         sessionStorage.removeItem(CACHE_KEY);
 
         // 3. แสดง Popup SweetAlert2 แจ้งเตือนกลางจอ
@@ -357,21 +416,35 @@ async function showHistoryModal(assetCode) {
                     <tbody>
         `;
 
-        const currentYear = new Date().getFullYear() + 543;
+        const gregorianYear = Number(todayBangkok().slice(0, 4));
+        const currentYear = gregorianYear + 543;
         const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
         months.forEach((month, index) => {
             const logsForMonth = logs.filter(log => {
-                if (!log.timestamp) return false;
-                const logParts = log.timestamp.split('/'); 
-                if(logParts.length >= 2) {
-                   const logMonth = parseInt(logParts[1], 10);
-                   return logMonth === (index + 1);
-                }
-                return false;
+                // ใช้วันที่ตรวจสำหรับรายการใหม่ และอ่านวันที่เดิมสำหรับประวัติเก่า
+                const selected = /^(\d{4})-(\d{2})-\d{2}$/.exec(log.inspectionDate || '');
+                if (selected) return Number(selected[1]) === gregorianYear && Number(selected[2]) === index + 1;
+                const stamp = String(log.timestamp || '');
+                const iso = /^(\d{4})-(\d{2})-\d{2}(?:[T ]|$)/.exec(stamp);
+                const local = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s|$)/.exec(stamp);
+                if (iso) return Number(iso[1]) === gregorianYear && Number(iso[2]) === index + 1;
+                if (!local) return false;
+                const y = Number(local[3]);
+                return (y > 2400 ? y - 543 : y) === gregorianYear && Number(local[2]) === index + 1;
             });
 
-            const logEntry = logsForMonth.length > 0 ? logsForMonth[logsForMonth.length - 1] : undefined;
+            // เลือกผลตรวจที่เกิดหลังสุดจริง ไม่ให้การกรอกย้อนหลังทับผลตรวจล่าสุด
+            const dayOf = log => {
+                const selected = /^(\d{4})-(\d{2})-(\d{2})$/.exec(log.inspectionDate || '');
+                if (selected) return Number(selected[3]);
+                const stamp = String(log.timestamp || '');
+                const iso = /^\d{4}-\d{2}-(\d{2})/.exec(stamp);
+                const local = /^(\d{1,2})\//.exec(stamp);
+                return Number((iso || local || [])[1]) || 0;
+            };
+            const logEntry = logsForMonth.reduce((latest, item) =>
+                !latest || dayOf(item) >= dayOf(latest) ? item : latest, undefined);
 
             if (logEntry) {
                  const isPass = logEntry.finalStatus === "ปกติ";

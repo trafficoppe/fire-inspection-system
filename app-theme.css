@@ -1,0 +1,125 @@
+/* Shared palette/type from the waste-management app, without changing form fields. */
+:root{--primary:#1e5631;--secondary:#4c9a2a;--bg:#f4f7f6;--ink:#333;--muted:#737d76;--line:#e0e6e2;--bs-primary:#1e5631}
+body{background:var(--bg)!important;color:var(--ink);font-family:Anuphan,Tahoma,sans-serif!important}
+.main-card,.card-custom{border:1px solid var(--line)!important;border-radius:14px!important;box-shadow:0 5px 24px #1027190d!important}
+.card-menu{color:var(--primary)!important;border-color:var(--line)!important;border-radius:7px!important;background:#fff!important}
+.card-menu:hover{background:#eef5f0!important;border-color:var(--secondary)!important}
+.navbar-brand,#dept-title-display,h1,h2,h3,h4,h5,h6{color:var(--primary)!important}
+.btn-primary,.btn-primary-custom,.btn-danger,.btn-success,.btn-green-toggle{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important;border-radius:7px!important}
+.btn-primary:hover,.btn-primary-custom:hover,.btn-green-toggle:hover{background:#174426!important;border-color:#174426!important}
+.btn-outline-secondary,.btn-outline-light{color:var(--primary)!important;border-color:#c7d6cb!important;background:#fff!important;border-radius:7px!important}
+#extinguisher-container .card{border-radius:10px!important;box-shadow:0 3px 12px #1027190b!important}
+#extinguisher-container .card .btn{background:#fff!important;color:var(--primary)!important;border:1px solid #c7d6cb!important;border-radius:7px!important;box-shadow:none!important;font-weight:500!important}
+#extinguisher-container .card .btn:hover{background:#eef5f0!important;border-color:var(--secondary)!important}
+.form-control,.form-select{border-color:#c7d6cb!important;border-radius:7px!important}
+.form-control:focus,.form-select:focus{border-color:var(--secondary)!important;box-shadow:0 0 0 3px #4c9a2a22!important}
+:focus-visible{outline:3px solid var(--secondary);outline-offset:3px}
+.badge.bg-success{background:var(--primary)!important}
+/* Keep failed inspection red, not a decorative theme color. */
+.btn-check:checked+.btn-outline-danger{background:#b42318!important;border-color:#b42318!important;color:white!important}
+
+/* UI refinement: light-green buttons, larger cards, comfortable spacing. */
+@media screen {
+ .fire-home .main-card,.fire-list #page-list{max-width:820px;padding:30px 28px}
+ .fire-home .home-menu{gap:18px!important}
+ .fire-home .main-card>a.card-menu{margin-bottom:18px}
+ .fire-home .card-menu{min-height:68px;display:flex;align-items:center;justify-content:center;padding:18px 20px;font-size:19px;background:#dcebc9!important;color:#203019!important;border-color:#b3cb94!important}
+ .fire-home .card-menu:hover{background:#cce1b2!important}
+ .fire-list #page-list .btn{background:#dcebc9!important;color:#203019!important;border:1px solid #b3cb94!important;min-height:44px;font-size:15px!important;padding:10px 16px!important}
+ .fire-list #page-list .btn:hover{background:#cce1b2!important}
+ .fire-list #extinguisher-container{display:grid;gap:22px}
+ .fire-list #extinguisher-container>.card{margin:0!important;min-height:174px;border-radius:14px!important}
+ .fire-list #extinguisher-container>.card>.card-body{padding:20px!important;gap:18px;min-height:172px}
+ .fire-list #extinguisher-container .text-start>div{font-size:16px!important;line-height:1.65!important;overflow-wrap:anywhere}
+ .fire-list #extinguisher-container .text-end{gap:12px!important;flex-wrap:wrap;padding-top:14px!important}
+ @media(max-width:540px){
+  .fire-home .main-card,.fire-list #page-list{padding:22px 18px}
+  .fire-list #extinguisher-container>.card>.card-body{padding:18px!important;align-items:flex-start!important;gap:14px}
+  .fire-list #extinguisher-container>.card>.card-body>.flex-grow-1{min-width:0}
+  .fire-list #extinguisher-container .text-start>div{font-size:15px!important}
+  .fire-list #extinguisher-container .text-end{justify-content:flex-start!important}
+  .fire-list #extinguisher-container .btn{font-size:14px!important;padding:9px 12px!important}
+ }
+}
+
+/* v1.4: spacious individual cards and an automatic one-photo viewport. */
+@media screen {
+ .fire-list #page-list{max-width:1000px;padding:34px;background:#f4f7f2!important}
+ .fire-list #extinguisher-container{gap:28px}
+ .fire-list #extinguisher-container>.card{min-height:252px;border:1px solid #dbe2d7!important;border-left:5px solid #a4c579!important;border-radius:18px!important;box-shadow:0 5px 20px #2030190c!important}
+ .fire-list #extinguisher-container>.card>.card-body{padding:26px!important;gap:26px;min-height:250px;align-items:center!important}
+ .fire-list #extinguisher-container .text-start>div{font-size:18px!important;line-height:1.75!important}
+ .fire-list #extinguisher-container .text-end{padding-top:22px!important;gap:16px!important}
+ .fire-list #extinguisher-container .btn{font-size:16px!important;min-height:48px;padding:12px 18px!important}
+ .fire-list #extinguisher-container .auto-slider-container{width:176px!important;height:190px!important;overflow:hidden!important;border-radius:12px;flex:0 0 176px;margin:0!important}
+ .fire-list #extinguisher-container .auto-slider-track{height:100%;width:100%;display:flex;will-change:transform}
+ .fire-list #extinguisher-container .auto-slider-track .sheet-photo-link{flex:0 0 100%;width:100%;height:190px!important;overflow:hidden}
+ .fire-list #extinguisher-container .auto-slider-track img{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:contain!important;background:#f3f5f1}
+ .fire-list #extinguisher-container .has-two-photos .auto-slider-track{animation:fire-photo-smooth 9s cubic-bezier(.45,0,.2,1) infinite}
+ .fire-list #extinguisher-container .auto-slider-container:focus-within .auto-slider-track{animation-play-state:paused}
+ @keyframes fire-photo-smooth{0%,40%{transform:translateX(0)}50%,90%{transform:translateX(-100%)}100%{transform:translateX(0)}}
+ @media(max-width:620px){
+  .fire-list #page-list{padding:22px 16px}
+  .fire-list #extinguisher-container{gap:26px}
+  .fire-list #extinguisher-container>.card>.card-body{padding:22px!important;flex-direction:column;align-items:stretch!important;gap:20px}
+  .fire-list #extinguisher-container .auto-slider-container{width:100%!important;height:240px!important;flex:0 0 auto;max-width:100%}
+  .fire-list #extinguisher-container .auto-slider-track .sheet-photo-link{height:240px!important}
+  .fire-list #extinguisher-container .text-start>div{font-size:17px!important}
+  .fire-list #extinguisher-container .text-end{justify-content:flex-start!important}
+ }
+}
+
+/* v1.5: white controls, green selected state, full-width image cards. */
+@media screen {
+ body .btn,body .card-menu,body button:not(.btn-check){background:#fff!important;color:#203019!important;border:1px solid #9cb886!important}
+ body .btn:hover,body .card-menu:hover,body button:not(:disabled):hover{background:#f6f9f2!important}
+ body .btn:active,body .card-menu:active,body button:not(:disabled):active,
+ body .btn[aria-pressed="true"],body button[aria-selected="true"],body .btn.selected,body .btn.active,
+ body .btn-check:checked+.btn:not(.btn-outline-danger){background:#46752d!important;color:#fff!important;border-color:#46752d!important}
+ body .btn-check:checked+.btn-outline-danger{background:#b42318!important;border-color:#b42318!important;color:#fff!important}
+ .fire-home .card-menu,.fire-list #page-list .btn,.fire-list #extinguisher-container .card .btn{background:#fff!important;color:#203019!important;border:1px solid #9cb886!important}
+ .fire-home .card-menu:active,.fire-list #page-list .btn:active,.fire-list #extinguisher-container .card .btn:active,.fire-list #page-list .btn[aria-pressed="true"],.fire-list #page-list .btn.selected,.fire-list #extinguisher-container .card .btn[aria-pressed="true"]{background:#46752d!important;color:#fff!important;border-color:#46752d!important}
+ .fire-list #extinguisher-container{gap:30px}
+ .fire-list #extinguisher-container>.card{border:2px solid #c2cfb8!important;border-left:2px solid #c2cfb8!important;border-radius:18px!important;box-shadow:0 5px 18px #20301912!important;overflow:hidden}
+ .fire-list #extinguisher-container>.card>.card-body{padding:22px!important;flex-direction:column!important;align-items:stretch!important;gap:22px}
+ .fire-list #extinguisher-container>.card>.card-body>.flex-grow-1{width:100%;min-width:0}
+ .fire-list #extinguisher-container .auto-slider-container{width:100%!important;max-width:100%;height:390px!important;flex:0 0 auto;margin:0!important;border-radius:12px}
+ .fire-list #extinguisher-container .auto-slider-track .sheet-photo-link{height:390px!important}
+ .fire-list #extinguisher-container .sheet-photo-empty{width:100%;min-height:200px}
+ @media(max-width:620px){
+  .fire-list #extinguisher-container>.card>.card-body{padding:16px!important;gap:18px}
+  .fire-list #extinguisher-container .auto-slider-container,.fire-list #extinguisher-container .auto-slider-track .sheet-photo-link{height:310px!important}
+ }
+}
+
+/* v1.6: real radio inputs shown as accessible theme buttons. */
+.inspection-choice{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.inspection-choice-item{position:relative;min-width:0}
+.inspection-radio{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.inspection-option{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;padding:12px 18px;background:#fff;color:#203019;border:1px solid #9cb886;border-radius:10px;font-size:18px;font-weight:600;cursor:pointer;box-sizing:border-box}
+.inspection-option:hover{background:#f6f9f2}
+.inspection-radio:checked+.inspection-option{background:#46752d;color:#fff;border-color:#46752d}
+.inspection-radio:focus-visible+.inspection-option{outline:3px solid #9cb886;outline-offset:3px}
+
+/* v1.7: inspection form adapts to the available screen width. */
+@media screen{
+ .fire-list #page-form{width:100%;max-width:1040px;padding:32px;box-sizing:border-box}
+ .fire-list #page-form img{max-width:100%;height:auto}
+ .fire-list #page-form .form-control{font-size:17px;min-height:46px;width:100%;box-sizing:border-box}
+ .inspection-items-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start}
+ .inspection-items-grid>.card{margin:0!important;min-width:0;border:1px solid #c2cfb8!important;border-radius:12px}
+ .inspection-items-grid>.card>.card-body{padding:22px!important}
+ .inspection-items-grid label{overflow-wrap:anywhere}
+ @media(max-width:700px){
+  .fire-list #page-form{padding:22px 16px;margin-top:12px}
+  .inspection-items-grid{grid-template-columns:minmax(0,1fr);gap:18px}
+  .inspection-items-grid>.card>.card-body{padding:18px!important}
+  .inspection-choice{gap:12px}
+  .inspection-option{font-size:17px;padding:12px;min-height:50px}
+ }
+}
+
+/* Same send-progress ring as the waste app's mu-send-spinner. */
+.fire-send-progress{display:flex;align-items:center;justify-content:center;gap:16px;line-height:1.5}
+.fire-send-progress .mu-send-spinner{display:block;flex:0 0 44px;width:44px;height:44px;box-sizing:border-box;border:4px solid #e1ebdb;border-top-color:#46752d;border-radius:50%;animation:mu-send-spin .85s linear infinite!important;will-change:transform}
+@keyframes mu-send-spin{to{transform:rotate(360deg)}}
