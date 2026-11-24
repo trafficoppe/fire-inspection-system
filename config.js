@@ -3,12 +3,12 @@
 // ==========================================
 
 const CONFIG = {
-    // เปิดเป็น true เฉพาะหลังตรวจว่า Apps Script รองรับบันทึกวันที่เลือกและส่งการยืนยันกลับ
-    INSPECTION_DATE_WRITE_READY: false,
-
     // 1. ลิงก์ Web App จาก Google Apps Script (เปลี่ยนที่นี่ที่เดียว)
     GAS_URL: 'https://script.google.com/macros/s/AKfycby6fRJJsptv_n8bh5CN7kn3NOniSjMPdULbBA0wGHBTdyUGgidUtQjIoLRxVoXhNv-y/exec',
     
+    // เปิดเฉพาะ URL Apps Script ที่ตรวจแล้วว่ามีตัวบันทึกผลตรวจโคมไฟฉุกเฉิน
+    EMERGENCY_LIGHT_INVENTORY_URL: '',
+
     // 2. ลิงก์สำหรับโหลดไฟล์ APK (ถ้ามี)
     APK_LINK: 'https://example.com/download/fire-app.apk',
     

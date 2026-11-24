@@ -3,7 +3,13 @@
 'use strict';
 const utilityScope='งานสาธารณูปโภคและระบบอาคาร';
 const utilityDepartments=['อาคารบำบัดน้ำเสีย','สถานีไฟฟ้าย่อยมหิดล','อาคารสิริวิทยา','อาคารศาลายา กองกายภาพฯ'];
-const departments=scope=>scope===utilityScope?utilityDepartments:[scope];
+const pmhLabel='อาคารมหิดลสิทธาคาร';
+const pmhNames=[pmhLabel,'มหิดลสิทธาคาร'];
+const libraryName='ศูนย์การเรียนรู้มหิดล';
+const siriName='อาคารสิริวิทยา';
+const pairedScope='ศูนย์การเรียนรู้มหิดลและอาคารสิริวิทยา';
+const pairedDepartments=[libraryName,siriName];
+const departments=scope=>scope===utilityScope?utilityDepartments:scope===pairedScope?pairedDepartments:pmhNames.includes(scope)?pmhNames:[scope];
 const includes=(scope,dept)=>!scope||departments(scope).includes(dept);
 const text=v=>String(v??'').trim();
 const validCode=v=>!['','-','null'].includes(text(v));
@@ -36,25 +42,25 @@ function build(inventory,inspections,month,scope=''){
  for(const key of ['หมายเลขครุภัณฑ์','เลขที่ถัง'])if(validCode(r[key]))add(JSON.stringify([dept,text(r[key])]),i);
  });
  const latest=new Map(),ambiguous=new Set();let unmatched=0,invalidDates=0;
- inspections.forEach((r,row)=>{if(!includes(scope,text(r['หน่วยงาน'])))return;const selected=text(r['วันที่ตรวจ']);const d=selected?date(selected):date(r['วันเวลาที่ตรวจ']);if(!d){invalidDates++;return;}if(d.getFullYear()!==year||d.getMonth()+1!==mon)return;
+ inspections.forEach((r,row)=>{if(!includes(scope,text(r['หน่วยงาน'])))return;const d=date(r['วันเวลาที่ตรวจ']);if(!d){invalidDates++;return;}if(d.getFullYear()!==year||d.getMonth()+1!==mon)return;
  const dept=text(r['หน่วยงาน']);if(!includes(scope,dept))return;
  // Prefer explicit asset column; legacy 'เลขที่ถัง' sometimes stores the asset code.
  const code=validCode(r['รหัสครุภัณฑ์'])?text(r['รหัสครุภัณฑ์']):text(r['เลขที่ถัง']);
  const candidates=validCode(code)?indexes.get(JSON.stringify([dept,code])):null;
  if(!candidates||!candidates.size){unmatched++;return;}
  if(candidates.size!==1){for(const i of candidates)ambiguous.add(i);return;}
- const i=[...candidates][0],old=latest.get(i),day=new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();
- const time=(date(r['วันเวลาที่ตรวจ'])||d).getTime();
- if(!old||day>old.day||(day===old.day&&time>old.time))latest.set(i,{day,time,row,r,conflict:false});
- else if(day===old.day&&time===old.time&&JSON.stringify(old.r)!==JSON.stringify(r))old.conflict=true;
+ const i=[...candidates][0],old=latest.get(i),time=d.getTime();
+ if(!old||time>old.time)latest.set(i,{time,row,r,conflict:false});
+ else if(time===old.time&&JSON.stringify(old.r)!==JSON.stringify(r))old.conflict=true;
  });
  inventory.forEach((r,i)=>{const group=groups.get(text(r['หน่วยงาน']));if(!group)return;const item=latest.get(i);if(ambiguous.has(i)||(item&&item.conflict))group.unknown++;else if(!item)group.uninspected++;else group[status(item.r)]++;});
  const rows=[...groups.values()].filter(g=>includes(scope,g.department));
- if(scope&&!departments(scope).some(d=>groups.has(d)))throw Error('ไม่พบอาคารหรือหน่วยงานนี้ในทะเบียน');
- const missingInventory=scope===utilityScope?utilityDepartments.filter(d=>!groups.has(d)):[];
+ const allowMissing=scope===utilityScope||scope===pairedScope||scope===siriName||pmhNames.includes(scope);
+ if(scope&&!allowMissing&&!departments(scope).some(d=>groups.has(d)))throw Error('ไม่พบอาคารหรือหน่วยงานนี้ในทะเบียน');
+ const missingInventory=scope===utilityScope?utilityDepartments.filter(d=>!groups.has(d)):scope===pairedScope?pairedDepartments.filter(d=>!groups.has(d)):pmhNames.includes(scope)&&!pmhNames.some(d=>groups.has(d))?[pmhLabel]:scope===siriName&&!groups.has(siriName)?[siriName]:[];
  for(const department of missingInventory)rows.push({department,total:0,ready:0,notReady:0,unknown:0,uninspected:0,missingInventory:true});
  const totals=rows.reduce((a,g)=>{for(const k of ['total','ready','notReady','unknown','uninspected'])a[k]+=g[k];return a;},{total:0,ready:0,notReady:0,unknown:0,uninspected:0});
  return {month,scope,rows,totals,unmatched,invalidDates,missingInventory};
 }
-const api={date,status,build,departments,includes,utilityScope};if(typeof module!=='undefined')module.exports=api;root.FireReport=api;
+const api={date,status,build,departments,includes,utilityScope,pmhLabel,pmhNames,libraryName,siriName,pairedScope};if(typeof module!=='undefined')module.exports=api;root.FireReport=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

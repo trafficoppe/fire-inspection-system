@@ -72,24 +72,10 @@ function clearCacheAndReload() {
     loadExtinguishers();
 }
 
-// สร้างวันตามปฏิทินสากลและเขตเวลาไทย โดยไม่ใช้ UTC หรือเขตเวลาเครื่อง
-function todayBangkok(now = new Date()) {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Bangkok', calendar: 'gregory', numberingSystem: 'latn',
-        year: 'numeric', month: '2-digit', day: '2-digit'
-    }).formatToParts(now);
-    const part = type => parts.find(p => p.type === type).value;
-    return `${part('year')}-${part('month')}-${part('day')}`;
-}
-
 function openForm(extId, location, imgSrc, assetCode) {
     document.getElementById('extinguisherId').value = extId;
     document.getElementById('extinguisherLocation').value = location;
-    document.getElementById('inspectionDate').value = todayBangkok();
-    const dateHelp = document.getElementById('inspectionDateHelp');
-    if (dateHelp) dateHelp.textContent = CONFIG.INSPECTION_DATE_WRITE_READY === true
-        ? 'ตั้งเป็นวันนี้ตามเวลาไทย แตะเพื่อเลือกวันอื่นได้'
-        : 'วันนี้บันทึกได้ตามเดิม วันอื่นต้องเปิดการบันทึกวันที่ใน Apps Script ก่อน';
+    document.getElementById('inspectionDate').valueAsDate = new Date();
     
     ['pin', 'gauge', 'hose', 'body', 'lever', 'label', 'installPoint', 'base'].forEach(item => {
         const passRadio = document.getElementById(`${item}_pass`);
@@ -284,16 +270,6 @@ function setupForm() {
         const recordKey = selectedRecord._recordKey;
 
         const submitBtn = form.querySelector('button[type="submit"]');
-        const dateInput = document.getElementById('inspectionDate');
-        if (!dateInput.reportValidity()) return;
-        const inspectionDate = dateInput.value;
-        const dateWriteReady = CONFIG.INSPECTION_DATE_WRITE_READY === true;
-        if (!dateWriteReady && inspectionDate !== todayBangkok()) {
-            const message = 'ระบบยังบันทึกวันที่อื่นไม่ได้ จึงยังไม่ได้ส่งข้อมูล กรุณาเลือกวันนี้หรือแจ้งผู้ดูแล';
-            if (typeof Swal !== 'undefined') await Swal.fire({icon:'warning',title:'ยังไม่ได้ส่งข้อมูล',text:message});
-            else alert(message);
-            return;
-        }
         submitBtn.disabled = true; // ป้องกันการกดปุ่มซ้ำ
 
         const assetCode = document.getElementById('extinguisherId').value;
@@ -319,8 +295,7 @@ function setupForm() {
         const formatCheck = (status, reason) => status === 'pass' ? 'ปกติ' : 'ชำรุด: ' + reason;
 
         const payload = {
-            action: dateWriteReady ? "inspection_with_date" : "inspection",
-            ...(dateWriteReady ? {inspectionDate} : {}),
+            action: "inspection",
             extinguisherId: assetCode,
             assetCode: assetCode,
             inspectorName: document.getElementById('inspectorName').value,
@@ -338,10 +313,7 @@ function setupForm() {
         };
 
         try {
-            const receipt = await FireSubmit.send(CONFIG.GAS_URL, payload);
-            if (dateWriteReady && receipt.inspectionDate !== inspectionDate) {
-                throw new Error('ระบบยังไม่ยืนยันวันที่ตรวจที่เลือก กรุณาตรวจประวัติก่อนส่งซ้ำ');
-            }
+            await FireSubmit.send(CONFIG.GAS_URL, payload);
         } catch (error) {
             submitBtn.disabled = false;
             if (typeof Swal !== 'undefined') await Swal.fire({icon:'warning',title:'ยังไม่ยืนยันการบันทึก',text:error.message});
@@ -416,35 +388,21 @@ async function showHistoryModal(assetCode) {
                     <tbody>
         `;
 
-        const gregorianYear = Number(todayBangkok().slice(0, 4));
-        const currentYear = gregorianYear + 543;
+        const currentYear = new Date().getFullYear() + 543;
         const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
         months.forEach((month, index) => {
             const logsForMonth = logs.filter(log => {
-                // ใช้วันที่ตรวจสำหรับรายการใหม่ และอ่านวันที่เดิมสำหรับประวัติเก่า
-                const selected = /^(\d{4})-(\d{2})-\d{2}$/.exec(log.inspectionDate || '');
-                if (selected) return Number(selected[1]) === gregorianYear && Number(selected[2]) === index + 1;
-                const stamp = String(log.timestamp || '');
-                const iso = /^(\d{4})-(\d{2})-\d{2}(?:[T ]|$)/.exec(stamp);
-                const local = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s|$)/.exec(stamp);
-                if (iso) return Number(iso[1]) === gregorianYear && Number(iso[2]) === index + 1;
-                if (!local) return false;
-                const y = Number(local[3]);
-                return (y > 2400 ? y - 543 : y) === gregorianYear && Number(local[2]) === index + 1;
+                if (!log.timestamp) return false;
+                const logParts = log.timestamp.split('/'); 
+                if(logParts.length >= 2) {
+                   const logMonth = parseInt(logParts[1], 10);
+                   return logMonth === (index + 1);
+                }
+                return false;
             });
 
-            // เลือกผลตรวจที่เกิดหลังสุดจริง ไม่ให้การกรอกย้อนหลังทับผลตรวจล่าสุด
-            const dayOf = log => {
-                const selected = /^(\d{4})-(\d{2})-(\d{2})$/.exec(log.inspectionDate || '');
-                if (selected) return Number(selected[3]);
-                const stamp = String(log.timestamp || '');
-                const iso = /^\d{4}-\d{2}-(\d{2})/.exec(stamp);
-                const local = /^(\d{1,2})\//.exec(stamp);
-                return Number((iso || local || [])[1]) || 0;
-            };
-            const logEntry = logsForMonth.reduce((latest, item) =>
-                !latest || dayOf(item) >= dayOf(latest) ? item : latest, undefined);
+            const logEntry = logsForMonth.length > 0 ? logsForMonth[logsForMonth.length - 1] : undefined;
 
             if (logEntry) {
                  const isPass = logEntry.finalStatus === "ปกติ";

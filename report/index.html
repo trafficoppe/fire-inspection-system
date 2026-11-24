@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css?v=1.8">
   <link rel="stylesheet" href="theme.css?v=1.7.1">
   <link rel="stylesheet" href="print-footer.css">
+  <style> #emergencyLightReportTable { table-layout: fixed; width: 100%; } #emergencyLightReportTable :is(th,td) { overflow-wrap: anywhere; white-space: normal; vertical-align: top; font-size: 12pt; } #emergencyLightReportTable thead { display: table-header-group; } #emergencyLightReportTable tr { break-inside: avoid; } </style>
 </head>
 <body>
   <header class="report-masthead no-print"><a href="../index.html" aria-label="กลับหน้าหลัก"><img src="division-logo.png" alt="กองกายภาพและสิ่งแวดล้อม"></a><a class="back-link" href="../index.html">กลับหน้าหลัก</a></header>
@@ -16,6 +17,8 @@
   <div class="no-print toolbar">
     
     <input type="month" id="monthPicker" aria-label="เดือนรายงาน" onchange="updateReport()" style="font-family: 'Sarabun'; font-size: 15px; padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;">
+    <label for="reportDatePicker">วันที่ออกเอกสาร</label>
+    <input type="date" id="reportDatePicker" aria-label="วันที่ออกเอกสาร" style="font-family: 'Sarabun'; font-size: 15px; padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;">
     <button id="printButton" disabled onclick="printReport()" class="print-btn">พิมพ์ / บันทึกเป็น PDF</button>
     <select id="buildingPicker" aria-label="อาคารหรือหน่วยงาน" onchange="updateReport()"><option value="">ทั้งหมด</option></select>
     <button onclick="updateReport(true)">โหลดข้อมูลใหม่</button>
@@ -52,7 +55,7 @@
       </tr>
       <tr>
         <td style="width: 1%; white-space: nowrap; vertical-align: top; border: none; padding: 0 10px 0 0;">วันที่</td>
-        <td style="vertical-align: top; border: none; padding: 0;"></td>
+        <td style="vertical-align: top; border: none; padding: 0;"><span id="reportDateText" contenteditable="false"></span></td>
       </tr>
       <tr>
         <td style="width: 1%; white-space: nowrap; vertical-align: top; border: none; padding: 0 10px 0 0;">เรื่อง</td>
@@ -89,26 +92,16 @@
     </table>
     <div hidden aria-hidden="true"><span id="sumUninspected"></span><span id="sumUnknown"></span><span id="sourceNote"></span></div>
 
-    <section id="alarmReportSection">
-    <!-- ================= เริ่ม: โค้ดตารางที่ 2 ที่นำมาวางแทรก ================= -->
-    <div class="table-title">
-      ตารางที่ 2 ผลการตรวจสอบระบบป้องกันอัคคีภัย (Fire Alarm System)
-    </div>
-<p id="alarmReportStatus" role="status"></p>
-<table class="doc-table doc-table-sec" id="fireAlarmTable">
-<thead><tr><th scope="col">หน่วยงาน</th><th scope="col" title="ทำความสะอาดทั่วไป">ความสะอาด</th><th scope="col" title="ตรวจสอบ Trouble Alarm">Trouble Alarm</th><th scope="col" title="ตรวจสอบฟิวส์และอุปกรณ์ป้องกัน">ฟิวส์/อุปกรณ์ป้องกัน</th><th scope="col" title="ตรวจสอบการทำงานของจอแสดงผล หลอดไฟสัญญาณต่างๆ">จอ/ไฟสัญญาณ</th><th scope="col" title="ตรวจสอบการทำงานของสวิตช์และแผงควบคุม">สวิตช์/แผงควบคุม</th><th scope="col" title="ตรวจสอบสภาพแบตเตอรี่และทำความสะอาดขั้วต่อสาย">แบตเตอรี่/ขั้วต่อ</th><th scope="col" title="ทดสอบการทำงานของการสั่งจาก General Alarm Switch">General Alarm</th></tr></thead>
-<tbody>
-<tr><th scope="row">งานจราจรฯ</th><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td></tr>
-<tr><th scope="row">ศูนย์การเรียนรู้</th><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td></tr>
-<tr><th scope="row">สิทธาคาร</th><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td></tr>
-<tr><th scope="row">สิริวิทยา</th><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td></tr>
-<tr><th scope="row">ศาลายา</th><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td></tr>
-<tr><th scope="row">สถานีไฟฟ้า</th><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td></tr>
-<tr><th scope="row">บำบัดน้ำเสีย</th><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td><td><span class="alarm-saved-result">—</span></td></tr>
-</tbody></table>
-    <!-- ================= สิ้นสุด: โค้ดตารางที่ 2 ================= -->
-    </section>
 
+
+    <section id="emergencyLightReportSection">
+      <div class="table-title">ตารางที่ 2 ผลการตรวจโคมไฟฟ้าแสงสว่างฉุกเฉิน</div>
+      <p id="emergencyLightReportStatus" role="status"></p>
+      <table class="doc-table doc-table-sec" id="emergencyLightReportTable">
+        <thead><tr><th>วันที่ตรวจ</th><th>หน่วยงาน</th><th>จุดติดตั้ง</th><th>ชั้น</th><th>ทดสอบการทำงาน</th><th>แบตเตอรี่</th><th>ผู้ตรวจสอบ</th><th>หมายเหตุ</th></tr></thead>
+        <tbody id="emergencyLightReportRows"></tbody>
+      </table>
+    </section>
 
     <!-- ส่วนสรุปผล (ของเดิมที่อยู่ด้านล่างสุด) -->
     <div class="indent-para" id="scopeSummary"></div>
@@ -130,8 +123,9 @@
   </div> <!-- สิ้นสุดหน้าเอกสาร -->
 
   </div>
-  <script src="../sheet-reader.js"></script><script src="config.js"></script><script src="../config.js"></script><script src="../alarm-data.js"></script><script src="alarm-report.js"></script> 
-  <script src="report-model.js?v=1.36-date1"></script>
-  <script src="script.js?v=1.36"></script>
+  <script src="../sheet-reader.js"></script><script src="config.js"></script><script src="../config.js"></script> 
+  <script src="report-model.js?v=20261124-pmh"></script>
+  <script src="emergency-light-report.js?v=20261124-1"></script>
+  <script src="script.js?v=20261124-2"></script>
 </body>
 </html>
