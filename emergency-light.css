@@ -41,3 +41,11 @@ fieldset input{width:auto;min-height:0;margin:0}
 .a11y-status{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}[hidden]{display:none!important}@media(max-width:540px){main{margin:0;padding:10px}.asset-card{padding:12px}.row-actions>*{flex:1}.nav-actions{align-items:stretch}.nav-actions>*{font-size:clamp(12px,4vw,15px);padding-inline:6px}.status-options>label{white-space:nowrap}}
 
 .retry-inventory{min-height:40px;margin-top:7px;color:#27583c;background:#fff}
+
+
+/* Receipt-confirmed inspection cue, separate from operational condition. */
+.asset-card.is-checked-normal{background:#e9f7ee;border-color:#4c9366}
+.asset-card.is-checked-fault{background:#fff1f2;border-color:#b95362}
+.asset-check-status{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0}
+.asset-check-badge{display:inline-block;font-size:.88rem;font-weight:700;line-height:1.3;padding:4px 9px;border:1px solid #88b69b;border-radius:999px;background:#d3efdf;color:#10472d}
+.asset-check-badge.asset-fault-badge{border-color:#d48d96;background:#f9dbe0;color:#861f34}

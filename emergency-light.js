@@ -5,6 +5,32 @@
  const unavailable='ยังเชื่อมระบบทะเบียนไม่ได้ กรุณาลองใหม่อีกครั้ง';
  let dept='', slug='', selected=null, generation=0, busy=false, ready=false;
  const pending=new Map();
+ const checkedTtl=10*60*1000;
+ let checkedMemory=new Map(), visibleItems=[], checkedTimer;
+ const checkedKey=()=> 'oppe.emergency-light.confirmed.v1.'+(demo?'demo.':'public.')+slug;
+ function recentChecks(now){
+  const recent=new Map();
+  const accept=entry=>{
+   if(!Array.isArray(entry)||entry.length!==3)return;
+   const [id,at,outcome]=entry;
+   if(!str(id,120)||!Number.isFinite(at)||at>now||now-at>=checkedTtl||!['normal','fault'].includes(outcome))return;
+   const previous=recent.get(id);
+   if(!previous||at>previous.at)recent.set(id,{at,outcome});
+  };
+  try{
+   const data=JSON.parse(window.localStorage.getItem(checkedKey())||'[]');
+   if(Array.isArray(data))data.slice(-500).forEach(accept);
+  }catch(_){}
+  checkedMemory.forEach(({at,outcome},id)=>accept([id,at,outcome]));
+  checkedMemory=recent;
+  return recent;
+ }
+ function rememberChecked(asset){
+  const at=Date.now(), recent=recentChecks(at);
+  recent.set(asset.assetId,{at,outcome:asset.testStatus==='ปกติ'&&asset.batteryStatus==='ปกติ'?'normal':'fault'});
+  const stored=[...recent].sort((a,b)=>a[1].at-b[1].at).slice(-500).map(([id,value])=>[id,value.at,value.outcome]);
+  try{window.localStorage.setItem(checkedKey(),JSON.stringify(stored));}catch(_){}
+ }
  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
  let historyRows=null,historyGeneration=0,historyAssetId=null,historyOpener=null;
  const state=()=>$('notice');const msg=text=>{const list=!$('inventory').hidden;state().textContent=text;state().className=list&&text?'a11y-status':'';$('inventory-notice').textContent=list?text:'';};
@@ -44,15 +70,32 @@
  function formBusy(form,on){busy=on;form.querySelectorAll('button,input,textarea').forEach(el=>{el.disabled=on;});}
  function setReady(on){ready=on;$('add').disabled=!on;}
  function showRows(items){
-  const fragment=document.createDocumentFragment();
+  const fragment=document.createDocumentFragment(), now=Date.now(), recent=recentChecks(now);
+  const unchecked=[], checked=[];
   for(const asset of items){
-   const card=node('article','','asset-card');
+   if(recent.has(asset.assetId))checked.push(asset);else unchecked.push(asset);
+  }
+  let refreshAt=Infinity;
+  for(const asset of unchecked.concat(checked)){
+   const state=recent.get(asset.assetId);
+   const card=node('article','','asset-card'+(state?' is-checked-'+state.outcome:''));
    card.append(node('p','ตัวที่ '+asset.assetNo),node('p','จุดติดตั้ง '+asset.location));
+   if(state){
+    refreshAt=Math.min(refreshAt,state.at+checkedTtl);
+    const badges=node('div','','asset-check-status');
+    badges.append(node('span','✓ ตรวจแล้ว','asset-check-badge'));
+    if(state.outcome==='fault')badges.append(node('span','พบข้อบกพร่อง','asset-check-badge asset-fault-badge'));
+    card.append(badges);
+   }
    const buttons=node('div','','row-actions');
    buttons.append(createButton('ประวัติการตรวจ',e=>openHistory(asset,e.currentTarget)),createButton('ตรวจ',()=>openInspect(asset),'inspect-action'));
    card.append(buttons);fragment.append(card);
   }
   $('items').replaceChildren(fragment);
+  clearTimeout(checkedTimer);
+  if(refreshAt<Infinity)checkedTimer=setTimeout(()=>{
+   if(!$('inventory').hidden&&!$('history').open&&!busy&&ready)showRows(visibleItems);
+  },Math.max(1,refreshAt-Date.now()));
  }
  async function load(success){
   if(!dept||busy)return;
@@ -65,7 +108,8 @@
    if(n!==generation)return;
    if(data?.status!=='success'){fail(outputError(data?.code??data?.status,'ยังโหลดรายการไม่ได้'));return;}
    if(!Array.isArray(data.items)||!data.items.every(assetOK)){fail('ยังโหลดรายการไม่ได้เนื่องจากรูปแบบข้อมูลไม่ตรง');return;}
-   showRows(data.items);setReady(true);msg(success||(!data.items.length?'ยังไม่มีรายการในหน่วยงานนี้':'พบ '+data.items.length+' รายการ'));
+   visibleItems=data.items;
+   showRows(visibleItems);setReady(true);msg(success||(!data.items.length?'ยังไม่มีรายการในหน่วยงานนี้':'พบ '+data.items.length+' รายการ'));
   }catch(e){if(n===generation)fail(e.message||'ยังโหลดทะเบียนไม่ได้');}
  }
  function openAdd(){if(!ready||busy)return;selected=null;$('add-form').reset();pick('adding');$('number').focus();}
@@ -150,12 +194,16 @@
    const {id,key}=attempt(kind,data);formBusy(form,true);msg('กำลังบันทึก…');
    const resp=await rpc(name,dept,data,id);
    if(resp?.status!=='success'){msg(outputError(resp?.code??resp?.status,'ยังไม่ได้ยืนยันการบันทึก'));return;}
-   if(resp.requestId!==id){msg('ยังไม่ได้ยืนยันการบันทึก กรุณาตรวจรายการก่อนส่งซ้ำ');return;}
+   if(resp.requestId!==id||(kind==='inspect'&&!demo&&resp.assetId!==data.assetId)){
+    msg('ยังไม่ได้ยืนยันการบันทึก กรุณาตรวจรายการก่อนส่งซ้ำ');return;
+   }
    pending.delete(key);done=true;
-   if(kind==='inspect')rememberInspector(data.inspectorName);
+   if(kind==='inspect'){rememberChecked(data);rememberInspector(data.inspectorName);}
   }catch(e){msg(e.message||'ยังไม่ได้ยืนยันการบันทึก');}
   finally{formBusy(form,false);}
-  if(done)load(kind==='add'?'เพิ่มรายการแล้ว':'บันทึกผลตรวจแล้ว');
+  if(done&&kind==='inspect'){
+   selected=null;pick('inventory');showRows(visibleItems);setReady(true);msg('บันทึกผลตรวจแล้ว');
+  }else if(done)load('เพิ่มรายการแล้ว');
  }
  $('add-form').addEventListener('submit',e=>{
   e.preventDefault();const f=e.currentTarget;if(!ready||busy||!f.reportValidity())return;
