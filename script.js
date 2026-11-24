@@ -12,33 +12,47 @@ const DEPT_MAP = {
 };
 
 const DEPT_NAME = DEPT_MAP[deptKey] || 'งานจราจรและความปลอดภัย';
-const CACHE_KEY = "gasData_folder_and_sheet_photos_v1_17_" + DEPT_NAME;
+const CACHE_KEY = "gasData_folder_and_sheet_photos_dept_scope_v1_" + DEPT_NAME;
 
 let renderedRecords = [];
 let selectedRecord = null;
-function assetOf(row) { return String(row['หมายเลขครุภัณฑ์'] || row['เลขที่ถัง'] || ''); }
+function extinguisherKey(value) {
+    const v = String(value ?? '').trim();
+    return v && v !== '-' && v.toLowerCase() !== 'null' ? v : '';
+}
+function assetOf(row) {
+    return extinguisherKey(row['หมายเลขครุภัณฑ์']) || extinguisherKey(row['เลขที่ถัง']);
+}
 function prepareRecords(rows) {
-    const counts = new Map();
-    rows.forEach(row => counts.set(assetOf(row), (counts.get(assetOf(row)) || 0) + 1));
-    return rows.map((row, index) => ({...row,
-        _recordKey: JSON.stringify([index, ...Object.values(row)]),
-        _ambiguousAsset: !assetOf(row) || counts.get(assetOf(row)) > 1
-    }));
+    const canonical = new Map(), alias = new Map();
+    const deptCode = (row, code) => JSON.stringify([extinguisherKey(row['หน่วยงาน']), code]);
+    const add = (map, key) => map.set(key, (map.get(key) || 0) + 1);
+    rows.forEach(row => {
+        const code = assetOf(row), number = extinguisherKey(row['เลขที่ถัง']);
+        if (code) add(canonical, deptCode(row, code));
+        for (const value of new Set([code, number].filter(Boolean))) add(alias, deptCode(row, value));
+    });
+    return rows.map((row, index) => {
+        const code = assetOf(row), k = deptCode(row, code);
+        return {...row, _recordKey: JSON.stringify([index, ...Object.values(row)]),
+            _ambiguousAsset: !code || canonical.get(k) !== 1 ||
+                (!extinguisherKey(row['หมายเลขครุภัณฑ์']) && alias.get(k) !== 1)};
+    });
 }
 function warnDuplicate() {
-    const message = 'รหัสถังซ้ำในฐานข้อมูล ยังแยกประวัติหรือบันทึกของถังนี้ไม่ได้ กรุณาตรวจรหัสก่อน';
+    const message = 'รหัสระบุถังไม่ครบหรือซ้ำในหน่วยงานนี้ กรุณาตรวจทะเบียนก่อนบันทึก';
     if (typeof Swal !== 'undefined') Swal.fire({icon: 'warning', title: 'รหัสถังซ้ำ', text: message});
     else alert(message);
 }
 function openRecord(index) {
     selectedRecord = renderedRecords[index];
-    if (!selectedRecord) return;
+    if (!selectedRecord || selectedRecord._ambiguousAsset) return warnDuplicate();
     openForm(assetOf(selectedRecord), selectedRecord['สถานที่ติดตั้ง'], '', assetOf(selectedRecord));
 }
 function historyRecord(index) {
     const row = renderedRecords[index];
     if (!row || row._ambiguousAsset) return warnDuplicate();
-    showHistoryModal(assetOf(row));
+    showHistoryModal(assetOf(row), extinguisherKey(row['หน่วยงาน']));
 }
 function refillRecord(index) {
     const row = renderedRecords[index];
@@ -141,7 +155,7 @@ async function loadExtinguishers() {
             const photoRows=await FireSheet.read('https://docs.google.com/spreadsheets/d/1LD5AVbwLV2RplbUYNlzY529rkN41dgvvqcXzGjBFBW8/export?format=csv&gid=62276880');
             allData.forEach(item=>{const matches=photoRows.filter(r=>r['หน่วยงาน']===item['หน่วยงาน']&&String(r['หมายเลขครุภัณฑ์']||'').trim()===String(item['หมายเลขครุภัณฑ์']||'').trim()&&String(r['เลขที่ถัง']||'').trim()===String(item['เลขที่ถัง']||'').trim());if(matches.length===1){item['รูปภาพ1']=matches[0]['รูปภาพ1'];item['รูปภาพ2']=matches[0]['รูปภาพ2'];}});
         }
-        const filtered = prepareRecords(allData).filter(item => item['หน่วยงาน'] === DEPT_NAME);
+        const filtered = prepareRecords(allData.filter(item => extinguisherKey(item['หน่วยงาน']) === DEPT_NAME));
 
         sessionStorage.setItem(CACHE_KEY, JSON.stringify(filtered));
         renderList(filtered, container, countBadge);
@@ -184,7 +198,7 @@ function renderList(data, container, countBadge) {
     renderedRecords = data.slice();
     data.forEach((ext, recordIndex) => {
         const recordKey = ext._recordKey;
-        const assetCode = ext['หมายเลขครุภัณฑ์'] || ext['เลขที่ถัง'];
+        const assetCode = assetOf(ext);
         let borderClass = ""; 
         let cardStyle = "background-color: #ffffff;"; 
         let statusBadge = "";
@@ -298,6 +312,7 @@ function setupForm() {
             action: "inspection",
             extinguisherId: assetCode,
             assetCode: assetCode,
+            extId: extinguisherKey(selectedRecord['เลขที่ถัง']),
             inspectorName: document.getElementById('inspectorName').value,
             checkBody: formatCheck(body, getReason('body')),
             checkPressure: formatCheck(gauge, getReason('gauge')),
@@ -353,7 +368,7 @@ function setupForm() {
     });
 }
 
-async function showHistoryModal(assetCode) {
+async function showHistoryModal(assetCode, department) {
     document.getElementById('historyAssetCode').innerText = assetCode;
     const historyListContainer = document.getElementById('historyListContainer');
     
@@ -363,8 +378,12 @@ async function showHistoryModal(assetCode) {
     myModal.show();
 
     try {
-        const response = await fetch(CONFIG.GAS_URL + "?action=get_log&assetCode=" + assetCode);
-        const logs = await response.json();
+        const url = new URL(CONFIG.GAS_URL);
+        url.search = new URLSearchParams({action:'get_log', assetCode, department});
+        const response = await fetch(url);
+        const raw = await response.json();
+        if (!response.ok || !Array.isArray(raw)) throw Error('โหลดประวัติถังไม่ได้');
+        const logs = raw.filter(row => extinguisherKey(row.department) === department);
 
         let tableHTML = `
             <div class="table-responsive border rounded">
@@ -424,7 +443,7 @@ async function showHistoryModal(assetCode) {
                         <td style="padding: 6px 4px;">
                             <span class="badge ${isPass ? 'bg-success' : 'bg-danger'} shadow-sm px-2 py-1" style="font-size: 10px; font-weight: normal;">${isPass ? 'ใช้งานได้' : 'ชำรุด'}</span>
                         </td>
-                        <td class="text-truncate" style="max-width: 70px; font-weight: normal; padding: 6px 4px;">${logEntry.inspectorName}</td>
+                        <td class="text-truncate" style="max-width: 70px; font-weight: normal; padding: 6px 4px;">${escapePhotoAttribute(logEntry.inspectorName)}</td>
                     </tr>
                 `;
             } else {

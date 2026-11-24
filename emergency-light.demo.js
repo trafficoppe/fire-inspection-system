@@ -1,6 +1,6 @@
 (() => {
  'use strict';
- if(!window.FireLightTransport.isLocal)return;
+ if(!(window.FireLightPublicApi||window.FireLightTransport)?.isLocal)return;
  const create=slug=>{
  const active=Object.hasOwn(ALARM_DEPTS,slug)?ALARM_DEPTS[slug]:null;
  const key=active?'oppe.emergency-light.local-preview.v4.'+slug:null;

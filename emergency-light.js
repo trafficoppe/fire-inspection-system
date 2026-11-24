@@ -2,8 +2,7 @@
  'use strict';
  const $=id=>document.getElementById(id), allowedStatus=['ปกติ','ไม่ปกติ'];
  const panels=['inventory','adding','inspecting'].map($);
- const unavailable='ยังไม่ได้เชื่อมระบบทะเบียนสำหรับผู้ได้รับอนุญาต';
- const denied='บัญชีนี้ไม่ได้รับสิทธิ์ในหน่วยงานนี้';
+ const unavailable='ยังเชื่อมระบบทะเบียนไม่ได้ กรุณาลองใหม่อีกครั้ง';
  let dept='', slug='', selected=null, generation=0, busy=false, ready=false;
  const pending=new Map();
  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -13,8 +12,7 @@
  const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text)el.textContent=text;if(cls)el.className=cls;return el;};
  const createButton=(label,cb,cls)=>{const b=node('button',label,cls);b.type='button';b.addEventListener('click',cb);return b;};
  function outputError(code,fallback){
-  if(code==='unauthorized'||code==='ACCESS_DENIED')return denied;
-  if(code==='connection_expired')return 'การเชื่อมต่อหมดอายุ กรุณาลองใหม่อีกครั้ง';
+  if(code==='unauthorized'||code==='ACCESS_DENIED'||code==='connection_expired')return unavailable;
   if(code==='duplicate_asset'||code==='duplicate_asset_no'||code==='ASSET_EXISTS')return 'ตัวที่นี้มีในทะเบียนของหน่วยงานแล้ว';
   if(code==='invalid'||code==='validation'||code==='INVALID_INPUT')return 'ข้อมูลไม่ถูกต้อง กรุณาตรวจข้อมูลแล้วลองใหม่';
   if(code==='invalid_asset')return 'ไม่พบโคมไฟตัวนี้ในทะเบียนของหน่วยงาน';
@@ -29,7 +27,7 @@
  const str=(v,n)=>typeof v==='string'&&v.trim()&&v.length<=n;
  const assetOK=r=>r&&str(r.assetId,120)&&str(r.assetNo,40)&&str(r.location,200);
  const recordOK=r=>r&&iso(r.inspectionDate)&&allowedStatus.includes(r.testStatus)&&allowedStatus.includes(r.batteryStatus);
- const transport=window.FireLightTransport;
+ const transport=window.FireLightPublicApi;
  const demo=transport.isLocal;
  let callBackend=null;
  function rpc(name,...args){
@@ -60,7 +58,7 @@
   if(!dept||busy)return;
   selected=null;pick('inventory');const n=generation;setReady(false);$('items').replaceChildren();
   const retry=$('inventory-retry');retry.hidden=true;
-  const fail=text=>{msg(text);retry.hidden=false;};
+  const fail=text=>{msg(success?success+' แต่ยังโหลดรายการล่าสุดไม่ได้':text);retry.hidden=false;};
   msg('กำลังโหลดทะเบียน…');
   try{
    const data=await rpc('listEmergencyLightAssets',dept);
@@ -103,12 +101,11 @@
    entries.sort((a,b)=>b.inspectionDate.localeCompare(a.inspectionDate));const r=entries[0];
    const ok=r.testStatus==='ปกติ'&&r.batteryStatus==='ปกติ', tr=node('tr','',ok?'passed':'anomaly');
    const label=node('td');label.append(node('span',ok?'ใช้งานได้':'ไม่ผ่าน','history-badge '+(ok?'pass':'fail')));
-   const inspector=node('td',typeof r.inspectorName==='string'&&r.inspectorName?r.inspectorName:'-','inspector-cell');inspector.title=inspector.textContent;
-   tr.append(month,status(r.testStatus),status(r.batteryStatus),label,inspector);f.append(tr);
+   const date=node('td',shortDate.format(new Date(r.inspectionDate+'T00:00:00Z')));
+   tr.append(month,status(r.testStatus),status(r.batteryStatus),label,date);f.append(tr);
    entries.forEach(e=>{
     resultCount++;
-    const text=shortDate.format(new Date(e.inspectionDate+'T00:00:00Z'))+' · ทดสอบ: '+e.testStatus+' · แบตเตอรี่: '+e.batteryStatus+
-      (e.inspectorName?' · ผู้ตรวจ: '+e.inspectorName:'')+(e.note?' · หมายเหตุ: '+e.note:'');
+    const text=shortDate.format(new Date(e.inspectionDate+'T00:00:00Z'))+' · ทดสอบ: '+e.testStatus+' · แบตเตอรี่: '+e.batteryStatus;
     details.append(node('li',text));
    });
   });
@@ -176,7 +173,7 @@
  $('add').addEventListener('click',openAdd);
  $('inventory-retry').addEventListener('click',()=>{
   if(busy||!dept||$('inventory-retry').hidden)return;
-  if(!demo){callBackend?.close?.();callBackend=transport.create(slug);}
+  if(!demo)callBackend=transport.create(slug);
   load();
  });
  document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>load()));

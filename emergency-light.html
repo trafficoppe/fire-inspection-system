@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; frame-src https://script.google.com; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; frame-src 'none'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>ทะเบียนโคมไฟฟ้าแสงสว่างฉุกเฉิน</title>
 <link rel="stylesheet" href="emergency-light.css?v=20261124-light-fast1">
 <script defer src="alarm-data.js"></script>
-<script defer src="emergency-light.config.js"></script>
-<script defer src="emergency-light.transport.js?v=20261124-light-fast1"></script>
-<script defer src="emergency-light.demo.js"></script>
-<script defer src="emergency-light.js?v=20261124-light-fast1"></script>
+<script defer src="config.js"></script>
+<script defer src="emergency-light.public-api.js?v=20261124-light-public1"></script>
+<script defer src="emergency-light.demo.js?v=20261124-light-public1"></script>
+<script defer src="emergency-light.js?v=20261124-light-public1"></script>
 </head><body><main><div class="main-card">
 <header><img class="alarm-logo" src="logo.png" alt="กองกายภาพและสิ่งแวดล้อม"><h1 id="department"></h1></header>
 <section id="inventory">
@@ -30,7 +30,7 @@
 <dialog id="history" aria-labelledby="history-title"><div class="history-head"><h2 id="history-title">ประวัติไฟฉุกเฉิน <span id="history-target"></span></h2><button id="history-close" class="history-close" type="button" aria-label="ปิดประวัติ" autofocus>×</button></div><div class="history-body">
 <div id="history-wait" class="history-wait" role="status" hidden><span class="history-spinner" aria-hidden="true"></span>กำลังโหลดประวัติ...</div>
 <div id="history-controls" hidden class="history-controls"><label for="history-year">ปี พ.ศ.</label><select id="history-year" aria-controls="history-table"></select></div>
-<div id="history-table" hidden class="history-wrap" tabindex="0" role="region" aria-label="ตารางประวัติการตรวจตามเดือน"><table class="month-table"><caption class="a11y-status">ผลตรวจล่าสุดของแต่ละเดือน</caption><thead><tr><th scope="col">ด/ป</th><th scope="col">ทดสอบ</th><th scope="col">แบตเตอรี่</th><th scope="col">สถานะ</th><th scope="col">ผู้ตรวจ</th></tr></thead><tbody id="history-rows"></tbody></table></div>
+<div id="history-table" hidden class="history-wrap" tabindex="0" role="region" aria-label="ตารางประวัติการตรวจตามเดือน"><table class="month-table"><caption class="a11y-status">ผลตรวจล่าสุดของแต่ละเดือน</caption><thead><tr><th scope="col">ด/ป</th><th scope="col">ทดสอบ</th><th scope="col">แบตเตอรี่</th><th scope="col">สถานะ</th><th scope="col">วันที่ตรวจ</th></tr></thead><tbody id="history-rows"></tbody></table></div>
 <p id="history-status" role="status" aria-live="polite"></p>
 <details id="history-details" class="history-details" hidden><summary id="history-detail-toggle">ผลตรวจทั้งหมด</summary><ol id="history-detail-rows"></ol></details>
 </div></dialog>
