@@ -12,6 +12,9 @@
  const local=u.protocol==='file:'||((u.protocol==='http:'||u.protocol==='https:')&&['localhost','127.0.0.1','[::1]'].includes(u.hostname));
  const unavailable='ยังไม่ได้เชื่อมระบบทะเบียนสำหรับผู้ได้รับอนุญาต';
  const timeoutText='ยังเชื่อมบัญชีมหิดลไม่ได้ กรุณาตรวจว่าลงชื่อเข้าใช้บัญชีที่มีสิทธิ์และลองเปิดใหม่';
+ // The list has a single end-to-end budget, including the waiting time before READY.
+ const LIST_DEADLINE_MS=8000;
+ const listTimeout='ยังดึงทะเบียนไม่ได้ กรุณาตรวจการเชื่อมต่อและลองใหม่';
  const noReceipt='ยังไม่ได้รับคำยืนยัน กรุณาตรวจรายการก่อนส่งซ้ำ';
  const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');
  const exact=(data,keys)=>data&&typeof data==='object'&&!Array.isArray(data)&&Object.keys(data).length===keys.length&&keys.every(k=>Object.hasOwn(data,k));
@@ -36,12 +39,12 @@
   const ready=new Promise((ok,bad)=>{resolveReady=ok;rejectReady=bad;});
   // Prevent an unhandled rejection if the user leaves before making a call.
   ready.catch(()=>{});
-  const deadline=setTimeout(()=>stop(new Error(timeoutText)),15000);
+  const deadline=setTimeout(()=>stop(new Error(timeoutText)),LIST_DEADLINE_MS);
   function stop(error){
    if(!active)return;
    active=false;channel='';source=null;clearTimeout(deadline);
    window.removeEventListener('message',receive);window.removeEventListener('pagehide',pageHide);
-   for(const q of pending.values()){clearTimeout(q.timer);q.reject(error);}pending.clear();
+   for(const q of pending.values())q.finish(false,error);pending.clear();
    iframe.remove();rejectReady(error);
   }
   const pageHide=()=>stop(new Error(timeoutText));
@@ -66,24 +69,35 @@
    }
    if(d.type!=='result'||event.source!==source||!exact(d,['protocol','type','channel','id','payload'])||typeof d.id!=='string')return;
    const q=pending.get(d.id);if(!q)return;
-   pending.delete(d.id);clearTimeout(q.timer);q.resolve(d.payload);
+   q.finish(true,d.payload);
   }
   window.addEventListener('message',receive);
   window.addEventListener('pagehide',pageHide,{once:true});
   try{iframe.src=url.href;document.body.append(iframe);}catch(_){stop(new Error(timeoutText));}
-  return async(method,args)=>{
-   if(!active)throw new Error(timeoutText);
-   if(!METHODS.has(method)||!Array.isArray(args)||args.length!==METHODS.get(method))throw new Error('ไม่รองรับคำขอนี้');
-   await ready;
-   if(!active||!source)throw new Error(timeoutText);
+  const call=(method,args)=>{
+   if(!active)return Promise.reject(new Error(timeoutText));
+   if(!METHODS.has(method)||!Array.isArray(args)||args.length!==METHODS.get(method))return Promise.reject(new Error('ไม่รองรับคำขอนี้'));
+   const isList=method==='listEmergencyLightAssets';
    const id=random();
    return new Promise((resolve,reject)=>{
-    const timer=setTimeout(()=>{pending.delete(id);reject(new Error(noReceipt));},25000);
-    pending.set(id,{resolve,reject,timer});
-    try{source.postMessage({protocol:PROTOCOL,type:'request',channel,id,method,args},origin);}
-    catch(_){clearTimeout(timer);pending.delete(id);reject(new Error(timeoutText));}
+    let done=false, posted=false;
+    function finish(ok,value){
+     if(done)return;
+     done=true;clearTimeout(timer);pending.delete(id);
+     (ok?resolve:reject)(value);
+    }
+    const timer=setTimeout(()=>finish(false,new Error(isList?(posted?listTimeout:timeoutText):noReceipt)),isList?LIST_DEADLINE_MS:25000);
+    ready.then(()=>{
+     if(done)return;  // A late READY must never dispatch the expired request.
+     if(!active||!source){finish(false,new Error(timeoutText));return;}
+     pending.set(id,{finish});
+     try{source.postMessage({protocol:PROTOCOL,type:'request',channel,id,method,args},origin);posted=true;}
+     catch(_){finish(false,new Error(timeoutText));}
+    },error=>finish(false,error));
    });
   };
+  call.close=()=>stop(new Error(timeoutText));
+  return call;
  }
  window.FireLightTransport=Object.freeze({create,isLocal:local});
 })();

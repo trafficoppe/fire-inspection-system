@@ -14,6 +14,7 @@
  const createButton=(label,cb,cls)=>{const b=node('button',label,cls);b.type='button';b.addEventListener('click',cb);return b;};
  function outputError(code,fallback){
   if(code==='unauthorized'||code==='ACCESS_DENIED')return denied;
+  if(code==='connection_expired')return 'การเชื่อมต่อหมดอายุ กรุณาลองใหม่อีกครั้ง';
   if(code==='duplicate_asset'||code==='duplicate_asset_no'||code==='ASSET_EXISTS')return 'ตัวที่นี้มีในทะเบียนของหน่วยงานแล้ว';
   if(code==='invalid'||code==='validation'||code==='INVALID_INPUT')return 'ข้อมูลไม่ถูกต้อง กรุณาตรวจข้อมูลแล้วลองใหม่';
   if(code==='invalid_asset')return 'ไม่พบโคมไฟตัวนี้ในทะเบียนของหน่วยงาน';
@@ -57,14 +58,17 @@
  }
  async function load(success){
   if(!dept||busy)return;
-  selected=null;pick('inventory');const n=generation;setReady(false);$('items').replaceChildren();msg('กำลังโหลดทะเบียน…');
+  selected=null;pick('inventory');const n=generation;setReady(false);$('items').replaceChildren();
+  const retry=$('inventory-retry');retry.hidden=true;
+  const fail=text=>{msg(text);retry.hidden=false;};
+  msg('กำลังโหลดทะเบียน…');
   try{
    const data=await rpc('listEmergencyLightAssets',dept);
    if(n!==generation)return;
-   if(data?.status!=='success'){msg(outputError(data?.code??data?.status,'ยังโหลดรายการไม่ได้'));return;}
-   if(!Array.isArray(data.items)||!data.items.every(assetOK)){msg('ยังโหลดรายการไม่ได้เนื่องจากรูปแบบข้อมูลไม่ตรง');return;}
+   if(data?.status!=='success'){fail(outputError(data?.code??data?.status,'ยังโหลดรายการไม่ได้'));return;}
+   if(!Array.isArray(data.items)||!data.items.every(assetOK)){fail('ยังโหลดรายการไม่ได้เนื่องจากรูปแบบข้อมูลไม่ตรง');return;}
    showRows(data.items);setReady(true);msg(success||(!data.items.length?'ยังไม่มีรายการในหน่วยงานนี้':'พบ '+data.items.length+' รายการ'));
-  }catch(e){if(n===generation)msg(e.message||'ยังโหลดทะเบียนไม่ได้');}
+  }catch(e){if(n===generation)fail(e.message||'ยังโหลดทะเบียนไม่ได้');}
  }
  function openAdd(){if(!ready||busy)return;selected=null;$('add-form').reset();pick('adding');$('number').focus();}
  const inspectorMemory=new Map();
@@ -170,6 +174,11 @@
   save(f,'inspect','inspectEmergencyLightAsset',{assetId:selected.assetId,inspectionDate,testStatus,batteryStatus,inspectorName,note});
  });
  $('add').addEventListener('click',openAdd);
+ $('inventory-retry').addEventListener('click',()=>{
+  if(busy||!dept||$('inventory-retry').hidden)return;
+  if(!demo){callBackend?.close?.();callBackend=transport.create(slug);}
+  load();
+ });
  document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>load()));
  function start(){
   const vals=new URLSearchParams(window.location.search).getAll('dept');

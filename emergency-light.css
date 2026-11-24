@@ -39,3 +39,5 @@ fieldset input{width:auto;min-height:0;margin:0}
 #history-status{margin:6px 0 0;text-align:center;font-size:12px;color:#59665d}#history-status:empty{display:none}#history-status.history-error{color:#b42318;padding:10px}
 .history-details{margin-top:8px;font-size:12px}.history-details>summary{cursor:pointer;color:#27583c;padding:4px 0}.history-details ol{margin:3px 0;padding-inline-start:22px}.history-details li{padding:3px 0;overflow-wrap:anywhere}
 .a11y-status{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}[hidden]{display:none!important}@media(max-width:540px){main{margin:0;padding:10px}.asset-card{padding:12px}.row-actions>*{flex:1}.nav-actions{align-items:stretch}.nav-actions>*{font-size:clamp(12px,4vw,15px);padding-inline:6px}.status-options>label{white-space:nowrap}}
+
+.retry-inventory{min-height:40px;margin-top:7px;color:#27583c;background:#fff}
