@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const utilityScope='งานสาธารณูปโภคและระบบอาคาร';
-const utilityDepartments=['อาคารบำบัดน้ำเสีย','สถานีไฟฟ้าย่อยมหิดล','อาคารสิริวิทยา','อาคารศาลายา กองกายภาพฯ'];
+const utilityDepartments=['อาคารบำบัดน้ำเสีย','สถานีไฟฟ้าย่อยมหิดล','อาคารศาลายา กองกายภาพฯ'];
 const pmhLabel='อาคารมหิดลสิทธาคาร';
 const pmhNames=[pmhLabel,'มหิดลสิทธาคาร'];
 const libraryName='ศูนย์การเรียนรู้มหิดล';
@@ -36,20 +36,26 @@ function status(r){
 }
 function build(inventory,inspections,month,scope=''){
  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw Error('เลือกเดือนให้ถูกต้อง');
- const [year,mon]=month.split('-').map(Number), groups=new Map(), indexes=new Map();
- const add=(key,i)=>{if(!indexes.has(key))indexes.set(key,new Set());indexes.get(key).add(i);};
+ const [year,mon]=month.split('-').map(Number), groups=new Map(), aliases=new Map(), canonical=new Map();
+ const add=(index,key,i)=>{if(!index.has(key))index.set(key,new Set());index.get(key).add(i);};
  inventory.forEach((r,i)=>{const dept=text(r['หน่วยงาน']);if(!dept)return;if(!groups.has(dept))groups.set(dept,{department:dept,total:0,ready:0,notReady:0,unknown:0,uninspected:0});groups.get(dept).total++;
- for(const key of ['หมายเลขครุภัณฑ์','เลขที่ถัง'])if(validCode(r[key]))add(JSON.stringify([dept,text(r[key])]),i);
+ const asset=validCode(r['หมายเลขครุภัณฑ์'])?text(r['หมายเลขครุภัณฑ์']):'';
+ const number=validCode(r['เลขที่ถัง'])?text(r['เลขที่ถัง']):'';
+ if(asset||number)add(canonical,JSON.stringify([dept,asset||number]),i);
+ for(const key of [asset,number].filter(Boolean))add(aliases,JSON.stringify([dept,key]),i);
  });
  const latest=new Map(),ambiguous=new Set();let unmatched=0,invalidDates=0;
  inspections.forEach((r,row)=>{if(!includes(scope,text(r['หน่วยงาน'])))return;const d=date(r['วันเวลาที่ตรวจ']);if(!d){invalidDates++;return;}if(d.getFullYear()!==year||d.getMonth()+1!==mon)return;
  const dept=text(r['หน่วยงาน']);if(!includes(scope,dept))return;
  // Prefer explicit asset column; legacy 'เลขที่ถัง' sometimes stores the asset code.
- const code=validCode(r['รหัสครุภัณฑ์'])?text(r['รหัสครุภัณฑ์']):text(r['เลขที่ถัง']);
- const candidates=validCode(code)?indexes.get(JSON.stringify([dept,code])):null;
+ const explicit=validCode(r['รหัสครุภัณฑ์']);
+ const code=explicit?text(r['รหัสครุภัณฑ์']):text(r['เลขที่ถัง']);
+ const candidates=validCode(code)?(explicit?canonical:aliases).get(JSON.stringify([dept,code])):null;
  if(!candidates||!candidates.size){unmatched++;return;}
  if(candidates.size!==1){for(const i of candidates)ambiguous.add(i);return;}
- const i=[...candidates][0],old=latest.get(i),time=d.getTime();
+ const i=[...candidates][0];
+ if(explicit&&!validCode(inventory[i]['หมายเลขครุภัณฑ์'])&&aliases.get(JSON.stringify([dept,code]))?.size!==1){ambiguous.add(i);return;}
+ const old=latest.get(i),time=d.getTime();
  if(!old||time>old.time)latest.set(i,{time,row,r,conflict:false});
  else if(time===old.time&&JSON.stringify(old.r)!==JSON.stringify(r))old.conflict=true;
  });

@@ -38,7 +38,8 @@ async function loadEmergencyLightReport(month,scope,isCurrent){
   if(!isCurrent())return;
   if(data.status==='unauthorized'){emergencyReportState('บัญชีนี้ยังไม่ได้รับสิทธิ์อ่านผลตรวจโคมไฟฟ้าแสงสว่างฉุกเฉิน');return;}
   if(data.status!=='success'||!Array.isArray(data.rows))throw Error('รูปแบบข้อมูลไม่ถูกต้อง');
-  renderEmergencyLightRows(data.rows);
+  const rows=scope===FireReport.utilityScope?data.rows.filter(row=>row&&FireReport.includes(scope,String(row.department??'').trim())):data.rows;
+  renderEmergencyLightRows(rows);
  }catch(error){if(isCurrent())emergencyReportState('ยังอ่านผลตรวจโคมไฟฟ้าแสงสว่างฉุกเฉินไม่ได้ โปรดตรวจการเชื่อมต่อและสิทธิ์ ไม่ใช่สถานะไม่มีผลตรวจ');}
  finally{clearTimeout(timer);}
 }
