@@ -373,13 +373,22 @@ function setupForm() {
     });
 }
 
+let historyRequest = 0;
 async function showHistoryModal(assetCode, department) {
+    const request = ++historyRequest;
+    const picker = document.getElementById('historyYearPicker');
+    const controls = document.getElementById('historyYearControls');
+    const message = document.getElementById('historyYearMessage');
+    controls.classList.add('d-none');
+    picker.replaceChildren();
+    picker.onchange = null;
+    message.textContent = '';
     document.getElementById('historyAssetCode').innerText = assetCode;
     const historyListContainer = document.getElementById('historyListContainer');
     
     historyListContainer.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 fw-normal small">กำลังโหลดประวัติ...</p></div>';
 
-    const myModal = new bootstrap.Modal(document.getElementById('historyModal'));
+    const myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('historyModal'));
     myModal.show();
 
     try {
@@ -388,7 +397,8 @@ async function showHistoryModal(assetCode, department) {
         const response = await fetch(url);
         const raw = await response.json();
         if (!response.ok || !Array.isArray(raw)) throw Error('โหลดประวัติถังไม่ได้');
-        const logs = raw.filter(row => extinguisherKey(row.department) === department);
+        if (request !== historyRequest) return;
+        const logs = raw.filter(row => row && extinguisherKey(row.department) === department);
 
         let tableHTML = `
             <div class="table-responsive border rounded">
@@ -412,18 +422,25 @@ async function showHistoryModal(assetCode, department) {
                     <tbody>
         `;
 
-        const reportYear = Number(inspectionToday().slice(0,4));
-        const currentYear = reportYear + 543;
         const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-        const latest = new Map();
+        const todayYear = Number(inspectionToday().slice(0,4));
+        const years = new Map();
         for (const log of logs) {
             const day = FireReport.date(log.inspectionDate || log.timestamp);
-            if (!day || day.getFullYear() !== reportYear) continue;
-            const month = day.getMonth(), stamp = FireReport.date(log.timestamp)?.getTime() ?? -Infinity;
-            const old = latest.get(month), time = day.getTime();
-            if (!old || time > old.time || (time === old.time && stamp > old.stamp)) latest.set(month,{log,time,stamp});
+            if (!day || day.getFullYear() > todayYear) continue;
+            const year = day.getFullYear(), month = day.getMonth();
+            const stamp = FireReport.date(log.timestamp)?.getTime() ?? -Infinity;
+            if (!years.has(year)) years.set(year, new Map());
+            const entries = years.get(year), old = entries.get(month), time = day.getTime();
+            if (!old || time > old.time || (time === old.time && stamp > old.stamp)) entries.set(month,{log,time,stamp});
         }
-
+        const available = [...new Set([todayYear, todayYear - 1, ...years.keys()])].sort((a,b)=>b-a);
+        for (const year of available) picker.add(new Option(String(year+543),String(year)));
+        picker.value = String(todayYear);
+        picker.onchange = () => {
+            const year = Number(picker.value), latest = years.get(year) || new Map();
+            let result = tableHTML;
+            message.textContent = latest.size ? '' : 'ไม่พบผลตรวจในปี พ.ศ. ' + (year+543);
         months.forEach((month, index) => {
             const logEntry = latest.get(index)?.log;
 
@@ -433,27 +450,27 @@ async function showHistoryModal(assetCode, department) {
                  const cross = `<span class="text-danger" style="font-weight: normal; font-size: 11px;">✗</span>`;
                  const rowClass = isPass ? 'table-success' : 'table-danger';
 
-                 tableHTML += `
+                 result += `
                     <tr class="${rowClass}">
-                        <td style="font-weight: normal; padding: 6px 4px;">${month} ${currentYear.toString().substring(2)}</td>
-                        <td style="padding: 6px 4px;">${(logEntry.checkBody || "").includes("ปกติ") ? tick : cross}</td>
-                        <td style="padding: 6px 4px;">${(logEntry.checkPressure || "").includes("ปกติ") ? tick : cross}</td>
-                        <td style="padding: 6px 4px;">${(logEntry.checkHose || "").includes("ปกติ") ? tick : cross}</td>
-                        <td style="padding: 6px 4px;">${(logEntry.checkPin || "").includes("ปกติ") ? tick : cross}</td>
-                        <td style="padding: 6px 4px;">${(logEntry.checkLever || "").includes("ปกติ") ? tick : cross}</td>
-                        <td style="padding: 6px 4px;">${(logEntry.checkLabel || "").includes("ปกติ") ? tick : cross}</td>
-                        <td style="padding: 6px 4px;">${(logEntry.checkInstall || "").includes("ปกติ") ? tick : cross}</td>
-                        <td style="padding: 6px 4px;">${(logEntry.checkBase || "").includes("ปกติ") ? tick : cross}</td>
+                        <td style="font-weight: normal; padding: 6px 4px;">${month} ${String(year + 543).slice(-2)}</td>
+                        <td style="padding: 6px 4px;">${String(logEntry.checkBody ?? "").trim() === "ปกติ" ? tick : cross}</td>
+                        <td style="padding: 6px 4px;">${String(logEntry.checkPressure ?? "").trim() === "ปกติ" ? tick : cross}</td>
+                        <td style="padding: 6px 4px;">${String(logEntry.checkHose ?? "").trim() === "ปกติ" ? tick : cross}</td>
+                        <td style="padding: 6px 4px;">${String(logEntry.checkPin ?? "").trim() === "ปกติ" ? tick : cross}</td>
+                        <td style="padding: 6px 4px;">${String(logEntry.checkLever ?? "").trim() === "ปกติ" ? tick : cross}</td>
+                        <td style="padding: 6px 4px;">${String(logEntry.checkLabel ?? "").trim() === "ปกติ" ? tick : cross}</td>
+                        <td style="padding: 6px 4px;">${String(logEntry.checkInstall ?? "").trim() === "ปกติ" ? tick : cross}</td>
+                        <td style="padding: 6px 4px;">${String(logEntry.checkBase ?? "").trim() === "ปกติ" ? tick : cross}</td>
                         <td style="padding: 6px 4px;">
-                            <span class="badge ${isPass ? 'bg-success' : 'bg-danger'} shadow-sm px-2 py-1" style="font-size: 10px; font-weight: normal;">${isPass ? 'ใช้งานได้' : 'ชำรุด'}</span>
+                            <span class="badge ${isPass ? 'bg-success' : 'tank-history-damaged'} shadow-sm px-2 py-1" style="font-size: 10px; font-weight: normal;">${isPass ? 'ใช้งานได้' : 'ชำรุด'}</span>
                         </td>
                         <td class="text-truncate" style="max-width: 70px; font-weight: normal; padding: 6px 4px;">${escapePhotoAttribute(logEntry.inspectorName)}</td>
                     </tr>
                 `;
             } else {
-                 tableHTML += `
+                 result += `
                     <tr>
-                        <td style="font-weight: normal; padding: 6px 4px;">${month} ${currentYear.toString().substring(2)}</td>
+                        <td style="font-weight: normal; padding: 6px 4px;">${month} ${String(year + 543).slice(-2)}</td>
                         <td style="color: #6c757d; padding: 6px 4px;">-</td>
                         <td style="color: #6c757d; padding: 6px 4px;">-</td>
                         <td style="color: #6c757d; padding: 6px 4px;">-</td>
@@ -469,15 +486,19 @@ async function showHistoryModal(assetCode, department) {
             }
         });
 
-        tableHTML += `
+        result += `
                     </tbody>
                 </table>
             </div>
         `;
 
-        historyListContainer.innerHTML = tableHTML;
+            historyListContainer.innerHTML = result;
+        };
+        controls.classList.remove('d-none');
+        picker.onchange();
 
     } catch (error) {
+        if (request !== historyRequest) return;
         console.error("Error loading history:", error);
         historyListContainer.innerHTML = '<div class="text-center text-danger p-4" style="font-weight: normal;">เกิดข้อผิดพลาดในการดึงข้อมูล</div>';
     }
