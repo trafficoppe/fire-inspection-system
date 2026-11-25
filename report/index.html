@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="theme.css?v=1.7.1">
   <link rel="stylesheet" href="print-footer.css">
   <style> .page .indent-para.intro-compact { text-align: left; text-justify: auto; letter-spacing: normal; word-spacing: normal; } .page .intro-compact .intro-ending { white-space: normal; } #emergencyLightReportTable { table-layout: fixed; width: 100%; } #emergencyLightReportTable :is(th,td) { overflow-wrap: anywhere; white-space: normal; vertical-align: top; font-size: 12pt; } #emergencyLightReportTable thead { display: table-header-group; } #emergencyLightReportTable tr { break-inside: avoid; } </style>
+  <style id="emergency-light-building-layout"> #emergencyLightReportTable thead th:first-child { width: 40%; } .page #emergencyLightReportTable tbody th[scope="row"] { font-weight: 400 !important; white-space: nowrap; overflow-wrap: normal; text-align: left; } </style>
 </head>
 <body>
   <header class="report-masthead no-print"><a href="../index.html" aria-label="กลับหน้าหลัก"><img src="division-logo.png" alt="กองกายภาพและสิ่งแวดล้อม"></a><a class="back-link" href="../index.html">กลับหน้าหลัก</a></header>
@@ -124,7 +125,7 @@
   <script src="report-model.js?v=main-scopes-20261125"></script>
   <script src="../alarm-data.js"></script>
   <script src="../emergency-light.public-api.js?v=20261125-report1"></script>
-  <script src="emergency-light-report.js?v=building-label-20261125-light-departments1"></script>
+  <script src="emergency-light-report.js?v=compact-building-20261125-light-departments1"></script>
   <script src="script.js?v=environment-signature-20261125"></script>
 </body>
 </html>

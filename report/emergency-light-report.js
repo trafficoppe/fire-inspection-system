@@ -12,7 +12,15 @@ function renderEmergencyLightSummary(rows,total,ready,notReady,note,all){
  table.tHead.rows[0].cells[0].textContent=all?'อาคาร':'รายการ';
  for(const result of rows){
   const row=document.createElement('tr'), label=document.createElement('th');
-  label.scope='row';label.textContent=result.name;row.append(label);
+  label.scope='row';
+  const shortNames = new Map([
+   ['งานจราจรและความปลอดภัย','งานจราจรฯ'],
+   ['อาคารศาลายา กองกายภาพฯ','อาคารศาลายา'],
+   ['อาคารอนุรักษ์สิ่งแวดล้อม','อาคารอนุรักษ์ฯ']
+  ]);
+  label.textContent=(all&&shortNames.get(result.name))||result.name;
+  if(label.textContent!==result.name)label.title=result.name;
+  row.append(label);
   for(const value of [result.total,result.ready,result.notReady]){
    const cell=document.createElement('td');cell.textContent=value==null?'—':String(value);row.append(cell);
   }
