@@ -119,6 +119,7 @@ function toggleReason(item) {
 }
 
 async function loadExtinguishers() {
+    window.FireTankTags?.setInventory(null);
     const container = document.getElementById('extinguisher-container');
     const countBadge = document.getElementById('ext-count');
 
@@ -159,6 +160,7 @@ async function loadExtinguishers() {
 
         sessionStorage.setItem(CACHE_KEY, JSON.stringify(filtered));
         renderList(filtered, container, countBadge);
+        window.FireTankTags?.setInventory(filtered);
 
     } catch (error) {
         console.error("Fetch Error:", error);
@@ -246,7 +248,7 @@ function renderList(data, container, countBadge) {
                         </div>
                         
                         <!-- ปรับแก้ปุ่มสีเหลืองและปุ่มสีเทาตามภาพตัวอย่าง -->
-                        <div class="text-end d-flex justify-content-end gap-2 mt-auto pt-1">
+                        <div class="text-end d-flex flex-wrap justify-content-end gap-2 mt-auto pt-1">
                             <button class="btn btn-sm rounded-pill px-3 py-1 fw-bold shadow-sm" style="color: #333; font-size: 11px; background-color: #ffca28; border: none;"
                                 onclick="event.stopPropagation(); refillRecord(${recordIndex})">
                                 เติมน้ำยา
@@ -254,6 +256,9 @@ function renderList(data, container, countBadge) {
                             <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" style="font-size: 11px; color: #555; background-color: #f8f9fa;"
                                     onclick="event.stopPropagation(); historyRecord(${recordIndex})">
                                 ประวัติการตรวจ
+                            </button>
+                            <button type="button" class="btn fire-tank-inspect" onclick="event.stopPropagation(); openRecord(${recordIndex})">
+                                ตรวจ
                             </button>
                         </div>
 
