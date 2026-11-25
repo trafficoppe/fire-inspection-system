@@ -68,15 +68,6 @@
         
         <!-- ================= หน้ารายการถังดับเพลิง ================= -->
         <div id="page-list" class="main-card">
-            <a id="building-report" class="btn btn-outline-secondary mb-3" href="report/index.html">รายงานอาคารนี้ / ดาวน์โหลด PDF</a>
-            <script>document.getElementById("building-report").href="report/index.html?"+new URLSearchParams({dept:new URLSearchParams(location.search).get("dept")||"traffic"});</script>
-            
-            <div class="d-flex align-items-center gap-2 flex-wrap mb-2" aria-label="ดาวน์โหลดแท็กถังดับเพลิง">
-                <label for="fire-tags-year" class="small fw-bold">ปี พ.ศ.</label>
-                <input id="fire-tags-year" class="form-control form-control-sm" style="width:85px" type="number" min="2500" step="1" inputmode="numeric">
-                <button id="fire-tags-pdf" class="btn btn-success btn-sm px-3" type="button" disabled>ดาวน์โหลด PDF แท็กทุกถัง</button>
-            </div>
-            <p id="fire-tags-status" class="small text-muted mb-2" role="status" aria-live="polite"></p>
             <!-- โลโก้ -> ชื่องาน -> เส้นประ -->
             <div class="text-center mb-4">
                 <!-- เพิ่ม mb-4 ตรงนี้เพื่อให้โลโก้ห่างจากชื่องานมากขึ้น -->
@@ -92,15 +83,16 @@
             <!-- ซ่อน Span จำนวนถังไว้เพื่อป้องกัน JS Error -->
             <span id="ext-count" class="d-none">0 ถัง</span>
 
-            <!-- ปุ่มกลับหน้าแรก และ ปุ่มเพิ่มถังดับเพลิง (พื้นขาว กดแล้วเป็นสีเขียว) -->
-            <div class="d-flex gap-2 mb-4 mt-4">
-                <a href="index.html" class="btn btn-green-toggle w-50 py-2 text-decoration-none d-flex justify-content-center align-items-center fw-bold" style="font-size: 0.9rem;">
-                    < กลับหน้าแรก
-                </a>
-                <button class="btn btn-green-toggle w-50 py-2 rounded fw-bold" style="font-size: 0.9rem;" onclick="goToAddDataPage()">
-                    + เพิ่มถังดับเพลิง
-                </button>
+            <div class="d-flex gap-2 mb-2 mt-4" aria-label="เมนูรายการถังดับเพลิง">
+                <a href="index.html" class="btn btn-green-toggle flex-fill py-2 text-decoration-none d-flex justify-content-center align-items-center fw-bold" style="font-size: 0.9rem;" aria-label="กลับหน้าแรก">กลับ</a>
+                <button class="btn btn-green-toggle flex-fill py-2 rounded fw-bold" type="button" style="font-size: 0.9rem;" onclick="goToAddDataPage()" aria-label="เพิ่มถังดับเพลิง">เพิ่มถัง</button>
+                <button id="fire-tags-pdf" class="btn btn-success btn-sm flex-fill px-3" type="button" aria-label="ดาวน์โหลด PDF แท็กทุกถัง" disabled>PDF</button>
             </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-2" aria-label="ตั้งค่าปีสำหรับดาวน์โหลดแท็กถังดับเพลิง">
+                <label for="fire-tags-year" class="small fw-bold">ปี พ.ศ.</label>
+                <input id="fire-tags-year" class="form-control form-control-sm" style="width:85px" type="number" min="2500" step="1" inputmode="numeric">
+            </div>
+            <p id="fire-tags-status" class="small text-muted mb-2" role="status" aria-live="polite"></p>
 
             <div id="extinguisher-container">
                 <div class="text-center text-muted py-5">กำลังดึงข้อมูล...</div>
