@@ -193,7 +193,7 @@ async function loadExtinguishers() {
 function renderList(data, container, countBadge) {
     if (!data || data.length === 0) {
         container.innerHTML = `<div class="text-center text-muted py-5 bg-white rounded-3 border shadow-sm" style="font-size: 12px;">ยังไม่มีข้อมูลถังดับเพลิงในระบบ</div>`;
-        countBadge.innerText = `0 ถัง`;
+        countBadge.innerText = `พบ 0 รายการ`;
         return;
     }
 
@@ -209,13 +209,12 @@ function renderList(data, container, countBadge) {
     });
 
     container.innerHTML = '';
-    countBadge.innerText = `${data.length} ถัง`;
+    countBadge.innerText = `พบ ${data.length} รายการ`;
 
     renderedRecords = data.slice();
     data.forEach((ext, recordIndex) => {
         const recordKey = ext._recordKey;
         const assetCode = assetOf(ext);
-        let borderClass = ""; 
         let cardStyle = "background-color: #ffffff;"; 
         let statusBadge = "";
 
@@ -239,46 +238,24 @@ function renderList(data, container, countBadge) {
         const imageBlockHTML = getFireExtinguisherImageBlock(ext);
 
         container.innerHTML += `
-            <div class="card mb-2 shadow-sm border-0 ${borderClass} cursor-pointer" 
-                 style="${cardStyle}"
-                 onclick="openRecord(${recordIndex})" role="button" tabindex="0" aria-label="ตรวจสภาพถัง ${escapePhotoAttribute(assetCode)}" onkeydown="if(event.target===this &amp;&amp; (event.key==='Enter' || event.key===' ')){event.preventDefault();openRecord(${recordIndex});}">
-                
-                <div class="card-body p-2 d-flex align-items-center">
-                    
-                    ${imageBlockHTML}
-                    
-                    <div class="flex-grow-1 d-flex flex-column justify-content-between" style="min-height: 80px;">
-                        
-                        <div class="d-flex justify-content-between align-items-start mb-1">
-                            <div class="text-start mb-0" style="line-height: 1.35;">
-                                <div style="font-size: 11px; color: #000; font-weight: normal;">ชนิด ${escapePhotoAttribute(ext['ชนิด'] || '-')}</div>
-                                <div style="font-size: 11px; color: #000; font-weight: normal;">ขนาด ${escapePhotoAttribute(ext['ขนาด'] || '-')}</div>
-                                <div style="font-size: 11px;">ครุภัณฑ์ ${escapePhotoAttribute(assetCode)} · จุดติดตั้ง ${escapePhotoAttribute(ext['สถานที่ติดตั้ง'] || '-')}</div>
-                                <div style="font-size: 11px; color: #000; font-weight: normal;">ถังเลขที่ ${escapePhotoAttribute(ext['เลขที่ถัง'] || '-')}</div>
-                            </div>
-                            <div class="flex-shrink-0 ms-1">
-                                ${statusBadge}
-                            </div>
+            <article class="card tank-card cursor-pointer" style="${cardStyle}"
+                 onclick="openRecord(${recordIndex})">
+                <div class="card-body tank-body">
+                    <div class="tank-info">
+                        ${imageBlockHTML}
+                        <div>
+                            <p>ถังเลขที่ ${escapePhotoAttribute(ext['เลขที่ถัง'] || '-')} ${statusBadge}</p>
+                            <p>จุดติดตั้ง ${escapePhotoAttribute(ext['สถานที่ติดตั้ง'] || '-')}</p>
+                            <p class="tank-details">ชนิด ${escapePhotoAttribute(ext['ชนิด'] || '-')} · ขนาด ${escapePhotoAttribute(ext['ขนาด'] || '-')} · ครุภัณฑ์ ${escapePhotoAttribute(assetCode || '-')}</p>
                         </div>
-                        
-                        <!-- ปรับแก้ปุ่มสีเหลืองและปุ่มสีเทาตามภาพตัวอย่าง -->
-                        <div class="text-end d-flex flex-wrap justify-content-end gap-2 mt-auto pt-1">
-                            <button class="btn btn-sm rounded-pill px-3 py-1 fw-bold shadow-sm" style="color: #333; font-size: 11px; background-color: #ffca28; border: none;"
-                                onclick="event.stopPropagation(); refillRecord(${recordIndex})">
-                                เติมน้ำยา
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" style="font-size: 11px; color: #555; background-color: #f8f9fa;"
-                                    onclick="event.stopPropagation(); historyRecord(${recordIndex})">
-                                ประวัติการตรวจ
-                            </button>
-                            <button type="button" class="btn fire-tank-inspect" onclick="event.stopPropagation(); openRecord(${recordIndex})">
-                                ตรวจ
-                            </button>
-                        </div>
-
+                    </div>
+                    <div class="tank-actions">
+                        <button type="button" class="tank-button" onclick="event.stopPropagation(); refillRecord(${recordIndex})">เติมน้ำยา</button>
+                        <button type="button" class="tank-button" onclick="event.stopPropagation(); historyRecord(${recordIndex})">ประวัติการตรวจ</button>
+                        <button type="button" class="tank-button tank-primary" onclick="event.stopPropagation(); openRecord(${recordIndex})">ตรวจ</button>
                     </div>
                 </div>
-            </div>
+            </article>
         `;
     });
 

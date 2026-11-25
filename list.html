@@ -61,6 +61,40 @@
     </style>
     <script src="submit-api.js"></script>
     <link rel="stylesheet" href="app-theme.css?v=1.7">
+    <style>
+      body.fire-list:has(#page-list:not([style*="display: none"])){background:#f3f6f3!important}
+      .fire-list #page-list{max-width:654px;padding:clamp(15px,4.8vw,34px);border:1px solid #d9e2d9!important;border-top:4px solid #91ae7d!important;color:#203019;background:#fff}
+      .fire-list #page-list .tank-header{text-align:center;border-bottom:2px dashed #e4ebe2;margin-bottom:20px;padding-bottom:14px}
+      .fire-list #page-list .tank-logo{display:block;max-width:335px;width:92%;height:auto;margin:0 auto 14px}
+      .fire-list #page-list :is(h1,h2){color:#27583c!important;font-weight:700;line-height:1.55}
+      .fire-list #page-list h1{font-size:21px;margin:4px 0}
+      .fire-list #page-list h2{font-size:20px;margin:5px 0 15px}
+      #page-list .tank-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      #page-list .tank-button{display:inline-flex;align-items:center;justify-content:center;text-align:center;text-decoration:none;font:inherit;font-weight:600;color:#203019;background:linear-gradient(180deg,#fff,#f4f8f2);border:1px solid #aac19d;border-radius:7px;min-height:44px;min-width:0;padding:8px 14px;box-shadow:0 2px 0 #a9bda0,0 4px 9px #203b2524;transition:background .15s ease,box-shadow .15s ease,transform .15s ease}
+      #page-list .tank-button:hover{background:#edf5e9}
+      #page-list .tank-button.tank-primary{color:white;border-color:#2e5c3b;background:linear-gradient(180deg,#568455,#2c5a3c);text-shadow:0 1px 1px #23402a;box-shadow:inset 0 1px 0 #ffffff38,0 2px 0 #234c31,0 4px 9px #183b2940}
+      #page-list .tank-button.tank-primary:hover:not(:disabled){background:linear-gradient(180deg,#629363,#326548)}
+      #page-list .tank-button:not(:disabled):active{transform:translateY(2px);box-shadow:inset 0 1px 2px #19361b36}
+      #page-list .tank-button:disabled{opacity:.65;cursor:not-allowed}
+      #page-list :is(.tank-button,input):focus-visible{outline:2px solid #225f3b;outline-offset:2px}
+      #page-list .tank-export{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px;padding:11px 12px;margin-top:14px;border:1px solid #d5e3d1;border-radius:10px;background:#f4f8f0}
+      #page-list .tank-export label{font-size:.9rem;font-weight:600}
+      #page-list .tank-export input{display:block;width:88px;min-height:44px;margin:0;padding:7px 9px;border:1px solid #c7d5c4;border-radius:8px;color:#203019;background:white;font:inherit}
+      #page-list #fire-tags-status,#page-list #ext-count{color:#44584c;font-size:.9rem;margin:10px 0 2px}
+      #page-list #fire-tags-status:empty,#page-list #ext-count:empty{display:none}
+      .fire-list #page-list #extinguisher-container{display:grid;gap:13px;margin-top:14px}
+      .fire-list #page-list #extinguisher-container>.tank-card{margin:0!important;min-height:0;border:1.4px solid #bdcdb5!important;border-radius:17px!important;background:#fff;box-shadow:none!important;color:#203019;overflow-wrap:anywhere}
+      .fire-list #page-list #extinguisher-container>.tank-card>.tank-body{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:15px 18px!important;min-height:0}
+      #page-list .tank-info{display:flex;gap:12px;align-items:flex-start}
+      #page-list .tank-info>:last-child{min-width:0;flex:1}
+      #page-list .tank-card p{margin:4px 0;font-size:1rem}
+      #page-list .tank-card .tank-details{color:#44584c;font-size:.88rem}
+      #page-list .tank-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+      #page-list .tank-actions .tank-button{min-height:48px;padding:10px 14px}
+      @media(max-width:540px){.fire-list #page-list #extinguisher-container>.tank-card>.tank-body{padding:12px!important}#page-list .tank-actions .tank-button{flex:1;padding-inline:8px;font-size:.88rem}}
+      @media(max-width:360px){#page-list #fire-tags-pdf{flex:1 0 100%}}
+      @media(prefers-reduced-motion:reduce){#page-list .tank-button{transition:none}}
+    </style>
 </head>
 <body class="fire-list">
 
@@ -68,32 +102,22 @@
         
         <!-- ================= หน้ารายการถังดับเพลิง ================= -->
         <div id="page-list" class="main-card">
-            <!-- โลโก้ -> ชื่องาน -> เส้นประ -->
-            <div class="text-center mb-4">
-                <!-- เพิ่ม mb-4 ตรงนี้เพื่อให้โลโก้ห่างจากชื่องานมากขึ้น -->
-                <img src="logo.png" alt="Logo" style="max-height: 70px;" class="mb-4">
-                
-                <!-- ชื่องาน (อยู่ใต้โลโก้) -->
-                <h6 class="fw-bold mb-4" id="dept-title-display" style="color: #2b4c65; font-size: 1.1rem;">กำลังโหลด...</h6>
-                
-                <!-- เส้นประ (อยู่ใต้ชื่องาน) -->
-                <hr style="border-top: 2px dashed #ddd; margin: 0;">
+            <header class="tank-header">
+                <img src="logo.png" class="tank-logo" alt="กองกายภาพและสิ่งแวดล้อม">
+                <h1 id="dept-title-display">กำลังโหลด...</h1>
+            </header>
+            <h2>รายการถังดับเพลิง</h2>
+            <nav class="tank-nav" aria-label="จัดการทะเบียนถังดับเพลิง">
+                <a href="index.html" class="tank-button">‹ กลับ</a>
+                <button class="tank-button tank-primary" type="button" onclick="goToAddDataPage()">+ เพิ่มถังดับเพลิง</button>
+            </nav>
+            <div class="tank-export" aria-label="ดาวน์โหลดแท็กถังดับเพลิง">
+                <label for="fire-tags-year">ปี พ.ศ.</label>
+                <input id="fire-tags-year" type="number" min="2500" step="1" inputmode="numeric">
+                <button id="fire-tags-pdf" class="tank-button tank-primary" type="button" disabled>ดาวน์โหลด PDF ทุกถัง</button>
             </div>
-
-            <!-- ซ่อน Span จำนวนถังไว้เพื่อป้องกัน JS Error -->
-            <span id="ext-count" class="d-none">0 ถัง</span>
-
-            <div class="d-flex gap-2 mb-2 mt-4" aria-label="เมนูรายการถังดับเพลิง">
-                <a href="index.html" class="btn btn-green-toggle flex-fill py-2 text-decoration-none d-flex justify-content-center align-items-center fw-bold" style="font-size: 0.9rem;" aria-label="กลับหน้าแรก">กลับ</a>
-                <button class="btn btn-green-toggle flex-fill py-2 rounded fw-bold" type="button" style="font-size: 0.9rem;" onclick="goToAddDataPage()" aria-label="เพิ่มถังดับเพลิง">เพิ่มถัง</button>
-                <button id="fire-tags-pdf" class="btn btn-success btn-sm flex-fill px-3" type="button" aria-label="ดาวน์โหลด PDF แท็กทุกถัง" disabled>PDF</button>
-            </div>
-            <div class="d-flex align-items-center gap-2 flex-wrap mb-2" aria-label="ตั้งค่าปีสำหรับดาวน์โหลดแท็กถังดับเพลิง">
-                <label for="fire-tags-year" class="small fw-bold">ปี พ.ศ.</label>
-                <input id="fire-tags-year" class="form-control form-control-sm" style="width:85px" type="number" min="2500" step="1" inputmode="numeric">
-            </div>
-            <p id="fire-tags-status" class="small text-muted mb-2" role="status" aria-live="polite"></p>
-
+            <p id="fire-tags-status" role="status" aria-live="polite"></p>
+            <p id="ext-count" role="status" aria-live="polite"></p>
             <div id="extinguisher-container">
                 <div class="text-center text-muted py-5">กำลังดึงข้อมูล...</div>
             </div>
@@ -202,7 +226,7 @@
     <script src="report/config.js"></script>
     <script src="report/report-model.js?v=inspection-date-20261125"></script>
     <script src="extinguisher-tags.js?v=inspection-date-20261125" defer></script>
-    <script src="script.js?v=inspection-date-20261125" defer></script>
+    <script src="script.js?v=inventory-light-theme-20261125" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>
