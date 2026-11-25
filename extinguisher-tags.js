@@ -45,15 +45,15 @@
    if(!code)continue;
    const ids=(explicit?canonical:alias).get(code);
    if(!ids?.size)continue;
-   const d=FireReport.date(log['วันเวลาที่ตรวจ']);
+   const d=FireReport.inspectionDay(log);
    if(d&&d.getFullYear()!==year)continue;
    if(ids.size!==1){for(const idx of ids)tags[idx].uncertain=true;continue;}
    const tag=tags[[...ids][0]];
    if(tag.uncertain)continue;
    if(!d){tag.invalidDate=true;continue;}
-   const i=d.getMonth(),prev=tag.months[i],time=d.getTime();
-   if(!prev||time>prev.time)tag.months[i]={time,d,log,conflict:false};
-   else if(time===prev.time&&JSON.stringify(log)!==JSON.stringify(prev.log))prev.conflict=true;
+   const i=d.getMonth(),prev=tag.months[i],time=d.getTime(),recorded=FireReport.inspectionRecordedTime(log);
+   if(!prev||time>prev.time||(time===prev.time&&recorded>prev.recorded))tag.months[i]={time,recorded,d,log,conflict:false};
+   else if(time===prev.time&&recorded===prev.recorded&&JSON.stringify(log)!==JSON.stringify(prev.log))prev.conflict=true;
   }
   return tags;
  }

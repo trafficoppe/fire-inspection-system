@@ -86,10 +86,24 @@ function clearCacheAndReload() {
     loadExtinguishers();
 }
 
+function inspectionToday() {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+        timeZone:'Asia/Bangkok', calendar:'gregory', numberingSystem:'latn',
+        year:'numeric', month:'2-digit', day:'2-digit'
+    }).formatToParts(new Date()).map(({type,value})=>[type,value]));
+    return [parts.year,parts.month,parts.day].join('-');
+}
+function validInspectionDay(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value > inspectionToday()) return false;
+    const date = new Date(value+'T00:00:00Z');
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0,10) === value;
+}
 function openForm(extId, location, imgSrc, assetCode) {
     document.getElementById('extinguisherId').value = extId;
     document.getElementById('extinguisherLocation').value = location;
-    document.getElementById('inspectionDate').valueAsDate = new Date();
+    const dateField = document.getElementById('inspectionDate');
+    dateField.max = inspectionToday();
+    dateField.value = dateField.max;
     
     ['pin', 'gauge', 'hose', 'body', 'lever', 'label', 'installPoint', 'base'].forEach(item => {
         const passRadio = document.getElementById(`${item}_pass`);
@@ -286,6 +300,13 @@ function setupForm() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedRecord || selectedRecord._ambiguousAsset) { warnDuplicate(); return; }
+        const dateField = document.getElementById('inspectionDate');
+        const inspectionDate = dateField.value;
+        if (!dateField.reportValidity() || !validInspectionDay(inspectionDate)) {
+            if (typeof Swal !== 'undefined') Swal.fire({icon:'warning',text:'กรุณาเลือกวันที่ตรวจที่ไม่เกินวันนี้'});
+            else alert('กรุณาเลือกวันที่ตรวจที่ไม่เกินวันนี้');
+            return;
+        }
         const recordKey = selectedRecord._recordKey;
 
         const submitBtn = form.querySelector('button[type="submit"]');
@@ -315,6 +336,7 @@ function setupForm() {
 
         const payload = {
             action: "inspection",
+            inspectionDate,
             extinguisherId: assetCode,
             assetCode: assetCode,
             extId: extinguisherKey(selectedRecord['เลขที่ถัง']),
@@ -333,7 +355,8 @@ function setupForm() {
         };
 
         try {
-            await FireSubmit.send(CONFIG.GAS_URL, payload);
+            const receipt = await FireSubmit.send(CONFIG.GAS_URL, payload);
+            if (receipt.inspectionDate !== inspectionDate) throw Error('ระบบยังไม่ยืนยันวันที่ตรวจที่เลือก กรุณาตรวจประวัติก่อนส่งซ้ำ');
         } catch (error) {
             submitBtn.disabled = false;
             if (typeof Swal !== 'undefined') await Swal.fire({icon:'warning',title:'ยังไม่ยืนยันการบันทึก',text:error.message});
@@ -412,21 +435,20 @@ async function showHistoryModal(assetCode, department) {
                     <tbody>
         `;
 
-        const currentYear = new Date().getFullYear() + 543;
+        const reportYear = Number(inspectionToday().slice(0,4));
+        const currentYear = reportYear + 543;
         const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        const latest = new Map();
+        for (const log of logs) {
+            const day = FireReport.date(log.inspectionDate || log.timestamp);
+            if (!day || day.getFullYear() !== reportYear) continue;
+            const month = day.getMonth(), stamp = FireReport.date(log.timestamp)?.getTime() ?? -Infinity;
+            const old = latest.get(month), time = day.getTime();
+            if (!old || time > old.time || (time === old.time && stamp > old.stamp)) latest.set(month,{log,time,stamp});
+        }
 
         months.forEach((month, index) => {
-            const logsForMonth = logs.filter(log => {
-                if (!log.timestamp) return false;
-                const logParts = log.timestamp.split('/'); 
-                if(logParts.length >= 2) {
-                   const logMonth = parseInt(logParts[1], 10);
-                   return logMonth === (index + 1);
-                }
-                return false;
-            });
-
-            const logEntry = logsForMonth.length > 0 ? logsForMonth[logsForMonth.length - 1] : undefined;
+            const logEntry = latest.get(index)?.log;
 
             if (logEntry) {
                  const isPass = logEntry.finalStatus === "ปกติ";
