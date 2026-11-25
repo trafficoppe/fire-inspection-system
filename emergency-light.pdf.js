@@ -65,6 +65,16 @@
    write(row?Number(row.inspectionDate.slice(8,10))+' '+month+' '+String(year+543).slice(-2):month,mid(0),y,15,62);
    if(!row)return;
    check(mid(row.testStatus===normal?1:2),y);check(mid(row.batteryStatus===normal?3:4),y);
+   const name=typeof row.inspectorName==='string'?row.inspectorName.trim():'';
+   if(name){
+    ctx.font='14px FireLightSarabun';
+    const words=name.split(/\s+/);
+    if(words.length>1&&ctx.measureText(name).width>60){
+     const split=Math.round(words.length/2);
+     write(words.slice(0,split).join(' '),mid(5),y-5.5,13,60);
+     write(words.slice(split).join(' '),mid(5),y+5.5,13,60);
+    } else write(name,mid(5),y,14,60);
+   }
   });
   const foot=[28,78,255,567], y=[602,627,654,697];
   rect(foot[0],y[0],foot[3]-foot[0],y[3]-y[0]);foot.slice(1,3).forEach(v=>line(v,y[0],v,y[3]));y.slice(1,3).forEach(v=>line(foot[0],v,foot[3],v));
@@ -74,6 +84,7 @@
   write('กดสวิตช์ “TEST” สังเกตว่าหลอดไฟฉุกเฉินติดสว่างหรือไม่',260,640,15,301,'left');
   write('สังเกตไฟแสดงสถานะช่อง BATT หากเป็นไฟสีเขียวแสดงว่าปกติ',260,668,15,301,'left');
   write('หากเป็นสีแดงหรือดับ อาจมีปัญหา',260,684,15,301,'left');
+  write('รหัสเอกสาร (Doc. No.) : OPPE-10-F-03-01 | ฉบับที่ (Rev. No.) : 00 | วันที่บังคับใช้ (Effective Date) : 01/12/2026',297.5,802,13,539);
   const jpeg=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.96));
   if(!jpeg)throw Error('ไม่สามารถสร้าง PDF บนอุปกรณ์นี้');
   const safe=String(asset.assetNo).replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_');

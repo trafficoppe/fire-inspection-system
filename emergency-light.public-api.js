@@ -60,7 +60,7 @@
    if(history){if(typeof args[1]!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(args[1]))throw Error('ไม่พบโคมไฟตัวนี้ในทะเบียนของหน่วยงาน');url.searchParams.set('assetId',args[1]);}
    const result=await request(url.href,{method:'GET'},10000,readError);
    if(result.status!=='success')return {status:result.status};
-   const key=history?'rows':'items',fields=history?['inspectionDate','testStatus','batteryStatus']:['assetId','assetNo','location'];
+   const key=history?'rows':'items',fields=history?(readOnly?['inspectionDate','testStatus','batteryStatus']:['inspectionDate','testStatus','batteryStatus','inspectorName']):['assetId','assetNo','location'];
    if(!Array.isArray(result[key]))throw Error(readError);
    return {status:'success',[key]:result[key].map(row=>pick(row,fields))};
   };
