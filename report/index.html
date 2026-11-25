@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="style.css?v=1.8">
   <link rel="stylesheet" href="theme.css?v=1.7.1">
   <link rel="stylesheet" href="print-footer.css">
-  <style> #emergencyLightReportTable { table-layout: fixed; width: 100%; } #emergencyLightReportTable :is(th,td) { overflow-wrap: anywhere; white-space: normal; vertical-align: top; font-size: 12pt; } #emergencyLightReportTable thead { display: table-header-group; } #emergencyLightReportTable tr { break-inside: avoid; } </style>
+  <style> .page .indent-para.intro-compact { text-align: left; text-justify: auto; letter-spacing: normal; word-spacing: normal; } .page .intro-compact .intro-ending { white-space: normal; } #emergencyLightReportTable { table-layout: fixed; width: 100%; } #emergencyLightReportTable :is(th,td) { overflow-wrap: anywhere; white-space: normal; vertical-align: top; font-size: 12pt; } #emergencyLightReportTable thead { display: table-header-group; } #emergencyLightReportTable tr { break-inside: avoid; } </style>
 </head>
 <body>
   <header class="report-masthead no-print"><a href="../index.html" aria-label="กลับหน้าหลัก"><img src="division-logo.png" alt="กองกายภาพและสิ่งแวดล้อม"></a><a class="back-link" href="../index.html">กลับหน้าหลัก</a></header>
@@ -17,11 +17,8 @@
   <div class="no-print toolbar">
     
     <input type="month" id="monthPicker" aria-label="เดือนรายงาน" onchange="updateReport()" style="font-family: 'Sarabun'; font-size: 15px; padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;">
-    <label for="reportDatePicker">วันที่ออกเอกสาร</label>
-    <input type="date" id="reportDatePicker" aria-label="วันที่ออกเอกสาร" style="font-family: 'Sarabun'; font-size: 15px; padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;">
     <button id="printButton" disabled onclick="printReport()" class="print-btn">พิมพ์ / บันทึกเป็น PDF</button>
     <select id="buildingPicker" aria-label="อาคารหรือหน่วยงาน" onchange="updateReport()"><option value="">ทั้งหมด</option></select>
-    <button onclick="updateReport(true)">โหลดข้อมูลใหม่</button>
     <p id="reportStatus" role="status" hidden></p>
   </div>
 
@@ -124,10 +121,10 @@
 
   </div>
   <script src="../sheet-reader.js"></script><script src="config.js"></script><script src="../config.js"></script> 
-  <script src="report-model.js?v=inspection-date-20261125"></script>
+  <script src="report-model.js?v=main-scopes-20261125"></script>
   <script src="../alarm-data.js"></script>
   <script src="../emergency-light.public-api.js?v=20261125-report1"></script>
-  <script src="emergency-light-report.js?v=20261125-light-narrative1"></script>
-  <script src="script.js?v=3-buildings-20261124"></script>
+  <script src="emergency-light-report.js?v=20261125-light-departments1"></script>
+  <script src="script.js?v=report-blank-date-20261125"></script>
 </body>
 </html>

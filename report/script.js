@@ -1,8 +1,8 @@
 'use strict';
 let cache=null,run=0,loaded=false;
-const deptMap={traffic:'งานจราจรและความปลอดภัย',salaya:'อาคารศาลายา กองกายภาพฯ',mlc:'ศูนย์การเรียนรู้มหิดล',sitthakarn:'อาคารมหิดลสิทธาคาร',siriwittaya:'อาคารสิริวิทยา',substation:'สถานีไฟฟ้าย่อยมหิดล',wastewater:'อาคารบำบัดน้ำเสีย'};
+const deptMap={traffic:'งานจราจรและความปลอดภัย',salaya:'อาคารศาลายา กองกายภาพฯ',mlc:'ศูนย์การเรียนรู้มหิดล',sitthakarn:'อาคารมหิดลสิทธาคาร',siriwittaya:'อาคารสิริวิทยา',substation:'สถานีไฟฟ้าย่อยมหิดล',wastewater:'อาคารบำบัดน้ำเสีย',environment:FireReport.environmentName};
 const requestedScope=new URLSearchParams(location.search).get('dept')||'';
-const fixedReportScopes=[FireReport.pmhLabel,FireReport.pairedScope,FireReport.siriName];
+const fixedReportScopes=[FireReport.pmhLabel,FireReport.pairedScope,FireReport.siriName,FireReport.environmentName];
 const reportScopesExcludingFixed=rows=>[...new Set(rows.map(r=>r['หน่วยงาน']).filter(n=>n&&!FireReport.pmhNames.includes(n)&&!fixedReportScopes.includes(n)))];
 let initialScope=deptMap[requestedScope]||requestedScope;
 const el=id=>document.getElementById(id);
@@ -15,7 +15,7 @@ const reportTemplate=reportPage.innerHTML;
 let reportEdited=false,lastRendered=null;
 reportPage.addEventListener('input',()=>{reportEdited=true;});
 reportPage.addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,event.clipboardData.getData('text/plain'));});
-function resetManual(){reportPage.innerHTML=reportTemplate;reportEdited=false;syncReportDate();}
+function resetManual(){reportPage.innerHTML=reportTemplate;reportEdited=false;}
 async function updateReport(force=false){if(reportEdited&&!window.confirm('การเปลี่ยนเดือน หน่วยงาน หรือโหลดใหม่ จะล้างข้อความที่แก้ในรายงาน ต้องการดำเนินการต่อหรือไม่?')){if(lastRendered){el('monthPicker').value=lastRendered.month;el('buildingPicker').value=lastRendered.scope;}return;}const seq=++run;resetManual();clear();el('reportStatus').hidden=true;el('reportStatus').textContent='กำลังโหลดข้อมูล';try{
  if(force||!cache){const [inventory,inspections]=await Promise.all([read(EXTINGUISHER_TOTAL_URL),read(INSPECTION_DATA_URL)]);if(seq!==run)return;if(!inventory.length||!('หน่วยงาน' in inventory[0]))throw Error('หัวทะเบียนไม่ตรง');if(inspections.length&&!('สรุปผล' in inspections[0]))throw Error('หัวผลตรวจไม่ตรง');cache={inventory,inspections};const previousScope=initialScope||el('buildingPicker').value;const selected=FireReport.pmhNames.includes(previousScope)?FireReport.pmhLabel:previousScope;initialScope='';el('buildingPicker').innerHTML='<option value="">ทั้งหมด</option><option value="งานสาธารณูปโภคและระบบอาคาร">งานสาธารณูปโภคและระบบอาคาร (โหลด 3 อาคาร)</option>'+fixedReportScopes.concat(reportScopesExcludingFixed(inventory)).map(n=>`<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');if(selected&&selected!==FireReport.utilityScope&&!fixedReportScopes.includes(selected)&&!reportScopesExcludingFixed(inventory).includes(selected)){const option=document.createElement('option');option.value=selected;option.textContent='ไม่พบ: '+selected;option.disabled=true;el('buildingPicker').appendChild(option);}el('buildingPicker').value=selected;}
  if(seq!==run)return;const month=el('monthPicker').value,scope=el('buildingPicker').value,report=FireReport.build(cache.inventory,cache.inspections,month,scope);
@@ -34,15 +34,9 @@ async function updateReport(force=false){if(reportEdited&&!window.confirm('ก�
  }catch(error){if(seq!==run)return;clear();el('reportStatus').hidden=false;el('reportStatus').textContent='ไม่สามารถแสดงรายงาน: '+error.message;console.error(error);}}
 function printReport(){if(!loaded)return;window.print();}
 const bangkokDate = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',calendar:'gregory',numberingSystem:'latn',year:'numeric',month:'2-digit',day:'2-digit'});
-const thaiReportDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist-nu-latn',{timeZone:'UTC',year:'numeric',month:'long',day:'numeric'});
 function bangkokToday(now=new Date()){
  const parts=Object.fromEntries(bangkokDate.formatToParts(now).map(({type,value})=>[type,value]));
  return [parts.year,parts.month,parts.day].join('-');
-}
-function syncReportDate(){
- const value=el('reportDatePicker').value;
- const date=value?new Date(value+'T00:00:00Z'):null;
- el('reportDateText').textContent=date&&Number.isFinite(date.getTime())?thaiReportDate.format(date):'';
 }
 function extinguisherReportSummary(report,scope){
  const t=report.totals;
@@ -54,11 +48,6 @@ function extinguisherReportSummary(report,scope){
 window.addEventListener('DOMContentLoaded',()=>{
  const today=bangkokToday();
  el('monthPicker').value=today.slice(0,7);
- const datePicker=el('reportDatePicker');
- datePicker.value=today;
- datePicker.addEventListener('input',syncReportDate);
- datePicker.addEventListener('change',syncReportDate);
- syncReportDate();
  updateReport();
 });
 

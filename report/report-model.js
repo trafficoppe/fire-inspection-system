@@ -6,6 +6,7 @@ const utilityDepartments=['อาคารบำบัดน้ำเสีย',
 const pmhLabel='อาคารมหิดลสิทธาคาร';
 const pmhNames=[pmhLabel,'มหิดลสิทธาคาร'];
 const libraryName='ศูนย์การเรียนรู้มหิดล';
+const environmentName='อาคารอนุรักษ์สิ่งแวดล้อม';
 const siriName='อาคารสิริวิทยา';
 const pairedScope='ศูนย์การเรียนรู้มหิดลและอาคารสิริวิทยา';
 const pairedDepartments=[libraryName,siriName];
@@ -73,13 +74,23 @@ function build(inventory,inspections,month,scope=''){
  else if(time===old.time&&recorded===old.recorded&&JSON.stringify(old.r)!==JSON.stringify(r))old.conflict=true;
  });
  inventory.forEach((r,i)=>{const group=groups.get(text(r['หน่วยงาน']));if(!group)return;const item=latest.get(i);if(ambiguous.has(i)||(item&&item.conflict))group.unknown++;else if(!item)group.uninspected++;else group[status(item.r)]++;});
- const rows=[...groups.values()].filter(g=>includes(scope,g.department));
- const allowMissing=scope===utilityScope||scope===pairedScope||scope===siriName||pmhNames.includes(scope);
+ const columns=['total','ready','notReady','unknown','uninspected'];
+ const mainDepartments=['งานจราจรและความปลอดภัย',libraryName,'มหิดลสิทธาคาร',siriName,...utilityDepartments.slice().reverse(),environmentName];
+ const missingRow=department=>({department,total:0,ready:0,notReady:0,unknown:0,uninspected:0,missingInventory:true});
+ const rows=scope?[...groups.values()].filter(g=>includes(scope,g.department)):mainDepartments.map(department=>{
+  const sources=departments(department).map(name=>groups.get(name)).filter(Boolean);
+  const row=missingRow(department);
+  if(!sources.length)return row;
+  delete row.missingInventory;
+  for(const source of sources)for(const column of columns)row[column]+=source[column];
+  return row;
+ });
+ const allowMissing=scope===utilityScope||scope===pairedScope||scope===siriName||scope===environmentName||pmhNames.includes(scope);
  if(scope&&!allowMissing&&!departments(scope).some(d=>groups.has(d)))throw Error('ไม่พบอาคารหรือหน่วยงานนี้ในทะเบียน');
- const missingInventory=scope===utilityScope?utilityDepartments.filter(d=>!groups.has(d)):scope===pairedScope?pairedDepartments.filter(d=>!groups.has(d)):pmhNames.includes(scope)&&!pmhNames.some(d=>groups.has(d))?[pmhLabel]:scope===siriName&&!groups.has(siriName)?[siriName]:[];
- for(const department of missingInventory)rows.push({department,total:0,ready:0,notReady:0,unknown:0,uninspected:0,missingInventory:true});
- const totals=rows.reduce((a,g)=>{for(const k of ['total','ready','notReady','unknown','uninspected'])a[k]+=g[k];return a;},{total:0,ready:0,notReady:0,unknown:0,uninspected:0});
+ const missingInventory=!scope?rows.filter(g=>g.missingInventory).map(g=>g.department):scope===utilityScope?utilityDepartments.filter(d=>!groups.has(d)):scope===pairedScope?pairedDepartments.filter(d=>!groups.has(d)):pmhNames.includes(scope)&&!pmhNames.some(d=>groups.has(d))?[pmhLabel]:scope===siriName&&!groups.has(siriName)?[siriName]:scope===environmentName&&!groups.has(environmentName)?[environmentName]:[];
+ if(scope)for(const department of missingInventory)rows.push(missingRow(department));
+ const totals=rows.reduce((a,g)=>{for(const k of columns)a[k]+=g[k];return a;},{total:0,ready:0,notReady:0,unknown:0,uninspected:0});
  return {month,scope,rows,totals,unmatched,invalidDates,missingInventory};
 }
-const api={date,inspectionDay,inspectionRecordedTime,status,build,departments,includes,utilityScope,pmhLabel,pmhNames,libraryName,siriName,pairedScope};if(typeof module!=='undefined')module.exports=api;root.FireReport=api;
+const api={date,inspectionDay,inspectionRecordedTime,status,build,departments,includes,utilityScope,pmhLabel,pmhNames,libraryName,siriName,pairedScope,environmentName};if(typeof module!=='undefined')module.exports=api;root.FireReport=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
