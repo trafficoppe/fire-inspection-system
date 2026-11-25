@@ -15,12 +15,25 @@ const text=v=>String(v??'').trim();
 const validCode=v=>!['','-','null'].includes(text(v));
 function date(v){
  if(v instanceof Date&&!isNaN(v)) return v;
+ if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(text(v))){
+  const instant=new Date(text(v));
+  if(!Number.isFinite(instant.getTime()))return null;
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(instant).map(({type,value})=>[type,Number(value)]));
+  return new Date(parts.year,parts.month-1,parts.day,parts.hour,parts.minute,parts.second,instant.getUTCMilliseconds());
+ }
  let m=text(v).match(/^Date\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+),\s*(\d+),\s*(\d+))?\)/);
  if(m) return new Date(+m[1],+m[2],+m[3],+m[4]||0,+m[5]||0,+m[6]||0);
  m=text(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
  if(m){let y=+m[3];if(y>2400)y-=543;const d=new Date(y,+m[2]-1,+m[1],+m[4]||0,+m[5]||0,+m[6]||0);return d.getFullYear()===y&&d.getMonth()===+m[2]-1&&d.getDate()===+m[1]?d:null;}
  m=text(v).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
  if(m){const d=new Date(+m[1],+m[2]-1,+m[3],+m[4]||0,+m[5]||0,+m[6]||0);return d.getMonth()===+m[2]-1&&d.getDate()===+m[3]?d:null;}return null;
+}
+function inspectionDay(row) {
+ const selected=text(row['วันที่ตรวจ']);
+ return selected?date(selected):date(row['วันเวลาที่ตรวจ']);
+}
+function inspectionRecordedTime(row) {
+ return date(row['วันเวลาที่ตรวจ'])?.getTime() ?? -Infinity;
 }
 function status(r){
  const result=text(r['สรุปผล']);
@@ -45,7 +58,7 @@ function build(inventory,inspections,month,scope=''){
  for(const key of [asset,number].filter(Boolean))add(aliases,JSON.stringify([dept,key]),i);
  });
  const latest=new Map(),ambiguous=new Set();let unmatched=0,invalidDates=0;
- inspections.forEach((r,row)=>{if(!includes(scope,text(r['หน่วยงาน'])))return;const d=date(r['วันเวลาที่ตรวจ']);if(!d){invalidDates++;return;}if(d.getFullYear()!==year||d.getMonth()+1!==mon)return;
+ inspections.forEach((r,row)=>{if(!includes(scope,text(r['หน่วยงาน'])))return;const d=inspectionDay(r);if(!d){invalidDates++;return;}if(d.getFullYear()!==year||d.getMonth()+1!==mon)return;
  const dept=text(r['หน่วยงาน']);if(!includes(scope,dept))return;
  // Prefer explicit asset column; legacy 'เลขที่ถัง' sometimes stores the asset code.
  const explicit=validCode(r['รหัสครุภัณฑ์']);
@@ -55,9 +68,9 @@ function build(inventory,inspections,month,scope=''){
  if(candidates.size!==1){for(const i of candidates)ambiguous.add(i);return;}
  const i=[...candidates][0];
  if(explicit&&!validCode(inventory[i]['หมายเลขครุภัณฑ์'])&&aliases.get(JSON.stringify([dept,code]))?.size!==1){ambiguous.add(i);return;}
- const old=latest.get(i),time=d.getTime();
- if(!old||time>old.time)latest.set(i,{time,row,r,conflict:false});
- else if(time===old.time&&JSON.stringify(old.r)!==JSON.stringify(r))old.conflict=true;
+ const old=latest.get(i),time=d.getTime(),recorded=inspectionRecordedTime(r);
+ if(!old||time>old.time||(time===old.time&&recorded>old.recorded))latest.set(i,{time,recorded,row,r,conflict:false});
+ else if(time===old.time&&recorded===old.recorded&&JSON.stringify(old.r)!==JSON.stringify(r))old.conflict=true;
  });
  inventory.forEach((r,i)=>{const group=groups.get(text(r['หน่วยงาน']));if(!group)return;const item=latest.get(i);if(ambiguous.has(i)||(item&&item.conflict))group.unknown++;else if(!item)group.uninspected++;else group[status(item.r)]++;});
  const rows=[...groups.values()].filter(g=>includes(scope,g.department));
@@ -68,5 +81,5 @@ function build(inventory,inspections,month,scope=''){
  const totals=rows.reduce((a,g)=>{for(const k of ['total','ready','notReady','unknown','uninspected'])a[k]+=g[k];return a;},{total:0,ready:0,notReady:0,unknown:0,uninspected:0});
  return {month,scope,rows,totals,unmatched,invalidDates,missingInventory};
 }
-const api={date,status,build,departments,includes,utilityScope,pmhLabel,pmhNames,libraryName,siriName,pairedScope};if(typeof module!=='undefined')module.exports=api;root.FireReport=api;
+const api={date,inspectionDay,inspectionRecordedTime,status,build,departments,includes,utilityScope,pmhLabel,pmhNames,libraryName,siriName,pairedScope};if(typeof module!=='undefined')module.exports=api;root.FireReport=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
