@@ -9,7 +9,7 @@ function emergencyReportState(message){
 function renderEmergencyLightSummary(rows,total,ready,notReady,note,all){
  emergencyReportState(note);
  const table=document.getElementById('emergencyLightReportTable');
- table.tHead.rows[0].cells[0].textContent=all?'หน่วยงาน':'รายการ';
+ table.tHead.rows[0].cells[0].textContent=all?'อาคาร':'รายการ';
  for(const result of rows){
   const row=document.createElement('tr'), label=document.createElement('th');
   label.scope='row';label.textContent=result.name;row.append(label);

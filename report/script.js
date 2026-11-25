@@ -52,7 +52,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 
 function setReportDepartment(scope){
- const reportingUnit=['อาคารบำบัดน้ำเสีย','สถานีไฟฟ้าย่อยมหิดล','อาคารสิริวิทยา','อาคารศาลายา กองกายภาพฯ',FireReport.libraryName,FireReport.pairedScope].includes(scope)?'งานสาธารณูปโภคและระบบอาคาร':FireReport.pmhNames.includes(scope)?FireReport.pmhLabel:scope;
+ const reportingUnit=scope===FireReport.environmentName?'งานภูมิทัศน์และสิ่งแวดล้อม':['อาคารบำบัดน้ำเสีย','สถานีไฟฟ้าย่อยมหิดล','อาคารสิริวิทยา','อาคารศาลายา กองกายภาพฯ',FireReport.libraryName,FireReport.pairedScope].includes(scope)?'งานสาธารณูปโภคและระบบอาคาร':FireReport.pmhNames.includes(scope)?FireReport.pmhLabel:scope;
  el('headerDepartment').textContent=reportingUnit||'งานจราจรและความปลอดภัย';
  el('introDepartment').textContent=reportingUnit||'งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม';
  el('senderDepartment').textContent=reportingUnit||'งานจราจรและความปลอดภัย';
@@ -63,6 +63,6 @@ function setReportSigner(scope){
  const utility=['งานสาธารณูปโภคและระบบอาคาร','อาคารบำบัดน้ำเสีย','สถานีไฟฟ้าย่อยมหิดล','อาคารสิริวิทยา','อาคารศาลายา กองกายภาพฯ',FireReport.pairedScope].includes(scope);
  const administration=['งานบริหารและพัฒนาระบบ','ศูนย์การเรียนรู้มหิดล'].includes(scope);
  const auditorium=FireReport.pmhNames.includes(scope);
- el('signerName').textContent=auditorium?'(นายจักรยศนันท์ เตียวตระกูล)':administration?'(นางสาวอรวรรณ ไพรี)':utility?'(ว่าที่ร้อยตรีอัครนันท์ เซี่ยงเห็น)':scope?'(นายพุฒิเศรษฐ์ ตันติเมธิน)':'(นายยุทธภูมิ ญานเพิ่ม)';
- el('signerPosition').textContent=auditorium?'หัวหน้างานบริหารอาคารมหิดลสิทธาคาร':administration?'รักษาการแทนหัวหน้างานบริหารและพัฒนาระบบ':utility?'หัวหน้างานสาธารณูปโภคและระบบอาคาร':scope?'ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม':'หัวหน้างานจราจรและความปลอดภัย';
+ el('signerName').textContent=scope===FireReport.environmentName?'(นายมนัสชาย ประเดิมชัย)':auditorium?'(นายจักรยศนันท์ เตียวตระกูล)':administration?'(นางสาวอรวรรณ ไพรี)':utility?'(ว่าที่ร้อยตรีอัครนันท์ เซี่ยงเห็น)':scope?'(นายพุฒิเศรษฐ์ ตันติเมธิน)':'(นายยุทธภูมิ ญานเพิ่ม)';
+ el('signerPosition').textContent=scope===FireReport.environmentName?'หัวหน้างานภูมิทัศน์และสิ่งแวดล้อม':auditorium?'เจ้าหน้าที่บริหารงานทั่วไป':administration?'รักษาการแทนหัวหน้างานบริหารและพัฒนาระบบ':utility?'หัวหน้างานสาธารณูปโภคและระบบอาคาร':scope?'ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม':'หัวหน้างานจราจรและความปลอดภัย';
 }
