@@ -2,6 +2,8 @@
 function emergencyReportState(message){
  const status=document.getElementById('emergencyLightReportStatus');
  status.textContent=message;
+ status.hidden=!message;
+ document.getElementById('emergencyLightNarrative')?.remove();
  document.getElementById('emergencyLightReportRows').replaceChildren();
 }
 function renderEmergencyLightSummary(total,ready,notReady,note){
@@ -12,6 +14,14 @@ function renderEmergencyLightSummary(total,ready,notReady,note){
   const cell=document.createElement('td');cell.textContent=value==null?'—':String(value);row.append(cell);
  }
  document.getElementById('emergencyLightReportRows').append(row);
+ if([total,ready,notReady].every(Number.isSafeInteger)){
+  const scoped=document.getElementById('scopeSummary');
+  const paragraph=scoped.hidden?document.getElementById('combinedSummary'):scoped;
+  const narrative=document.createElement('span');
+  narrative.id='emergencyLightNarrative';
+  narrative.textContent=` และมีไฟฉุกเฉินทั้งหมด ${total} ตัว พร้อมใช้งาน ${ready} ตัว และไม่พร้อมใช้งาน ${notReady} ตัว`;
+  paragraph.append(narrative);
+ }
 }
 function summarizeEmergencyLightMonth(history,month){
  const statuses=['ปกติ','ไม่ปกติ'];
@@ -60,7 +70,6 @@ async function loadEmergencyLightReport(month,scope,isCurrent){
   });
   if(!isCurrent())return;
   const ready=outcomes.filter(v=>v==='ready').length,notReady=outcomes.filter(v=>v==='notReady').length;
-  const remaining=total-ready-notReady;
-  renderEmergencyLightSummary(total,ready,notReady,'จำนวนอ้างอิงทะเบียนปัจจุบัน สถานะใช้ผลตรวจล่าสุดในเดือนที่เลือก'+(remaining?' • ยังไม่มีผลที่ยืนยันได้ '+remaining+' โคม':'')+(total===0?' • ไม่พบโคมในทะเบียนของขอบเขตที่เลือก':''));
+  renderEmergencyLightSummary(total,ready,notReady,'');
  }catch(_){if(isCurrent())renderEmergencyLightSummary(total,null,null,total==null?'อ่านทะเบียนบางหน่วยงานไม่สำเร็จ จึงยังสรุปยอดไม่ได้':'อ่านผลตรวจไม่ครบ จึงยังไม่แสดงยอดพร้อมใช้งานและไม่พร้อมใช้งาน');}
 }
