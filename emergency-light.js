@@ -32,7 +32,7 @@
   try{window.localStorage.setItem(checkedKey(),JSON.stringify(stored));}catch(_){}
  }
  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
- let historyRows=null,historyGeneration=0,historyAssetId=null,historyOpener=null;
+ let historyRows=null,historyGeneration=0,historyAssetId=null,historyPdfAsset=null,historyOpener=null;
  const state=()=>$('notice');const msg=text=>{const list=!$('inventory').hidden;state().textContent=text;state().className=list&&text?'a11y-status':'';$('inventory-notice').textContent=list?text:'';};
  const pick=id=>{generation++;panels.forEach(p=>{p.hidden=p.id!==id;});msg('');};
  const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text)el.textContent=text;if(cls)el.className=cls;return el;};
@@ -160,7 +160,8 @@
  }
  async function openHistory(asset,opener){
   if(!ready||busy)return;
-  const n=++historyGeneration;historyAssetId=asset.assetId;historyOpener=opener;historyRows=null;
+  const n=++historyGeneration;historyAssetId=asset.assetId;historyPdfAsset=null;historyOpener=opener;historyRows=null;
+  $('history-pdf').hidden=true;$('history-pdf').disabled=false;
   $('history-controls').hidden=$('history-table').hidden=$('history-details').hidden=true;
   $('history-rows').replaceChildren();$('history-year').replaceChildren();$('history-detail-rows').replaceChildren();
   $('history-target').textContent='ตัวที่ '+asset.assetNo;historyMsg('');$('history-wait').hidden=false;
@@ -172,7 +173,7 @@
    $('history-wait').hidden=true;
    if(data?.status!=='success'){historyMsg(outputError(data?.code??data?.status,'เกิดข้อผิดพลาดในการดึงข้อมูล'),true);return;}
    if(!Array.isArray(data.rows)||!data.rows.every(recordOK)){historyMsg('ยังอ่านประวัติไม่ได้เนื่องจากรูปแบบข้อมูลไม่ตรง',true);return;}
-   historyRows=data.rows;
+   historyRows=data.rows;historyPdfAsset=asset;$('history-pdf').hidden=false;
    const currentYear=Number(today().slice(0,4)),years=new Set([currentYear,...historyRows.map(r=>Number(r.inspectionDate.slice(0,4)))]);
    const select=$('history-year');for(const yr of [...years].sort((a,b)=>b-a)){const opt=node('option',String(yr+543));opt.value=String(yr);select.append(opt);}
    select.value=String(currentYear);$('history-controls').hidden=(years.size<=1);
@@ -180,11 +181,19 @@
   }catch(e){if(n===historyGeneration&&historyDialog.open){$('history-wait').hidden=true;historyMsg(e.message||'เกิดข้อผิดพลาดในการดึงข้อมูล',true);}}
  }
  function closeHistory(){
-  historyGeneration++;historyAssetId=null;historyRows=null;
+  historyGeneration++;historyAssetId=null;historyPdfAsset=null;historyRows=null;
   const opener=historyOpener;historyOpener=null;
   if(historyDialog.open)historyDialog.close();
   if(opener)opener.focus();
  }
+ $('history-pdf').addEventListener('click',async e=>{
+  const button=e.currentTarget, current=historyGeneration, asset=historyPdfAsset, rows=historyRows;
+  if(!asset||!rows||button.disabled)return;
+  const year=Number($('history-year').value);button.disabled=true;
+  try{await window.FireLightPdf.download(asset,dept,year,rows);}
+  catch(_){if(current===historyGeneration)historyMsg('สร้าง PDF ไม่สำเร็จ กรุณาลองอีกครั้ง',true);}
+  finally{if(current===historyGeneration)button.disabled=false;}
+ });
  $('history-close').addEventListener('click',closeHistory);
  historyDialog.addEventListener('cancel',e=>{e.preventDefault();closeHistory();});
  $('history-year').addEventListener('change',e=>historyYear(Number(e.currentTarget.value)));
@@ -207,8 +216,11 @@
  }
  $('add-form').addEventListener('submit',e=>{
   e.preventDefault();const f=e.currentTarget;if(!ready||busy||!f.reportValidity())return;
-  const assetNo=$('number').value.trim(),location=$('location').value.trim();
-  if(!str(assetNo,40)||!str(location,200)){msg('กรุณากรอกตัวที่และจุดติดตั้ง');return;}
+  const assetNo=$('number').value.trim(),point=$('location').value.trim(),floor=$('installationFloor').value.trim();
+  if(!str(assetNo,40)||!str(point,200)||!str(floor,50)){msg('กรุณากรอกตัวที่ จุดติดตั้ง และชั้นที่ติดตั้ง');return;}
+  // Keep the existing location field and registry columns compatible with the current backend.
+  const location=point+' | ชั้นที่ติดตั้ง: '+floor;
+  if(!str(location,200)){msg('จุดติดตั้งและชั้นรวมกันยาวเกินไป กรุณาย่อจุดติดตั้ง');return;}
   save(f,'add','addEmergencyLightAsset',{assetNo,location});
  });
  $('inspect-form').addEventListener('submit',e=>{
