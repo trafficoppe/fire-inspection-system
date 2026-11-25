@@ -36,16 +36,17 @@
    ]);
   }catch(_){throw Error(errorText);}finally{clearTimeout(timer);}
  }
- function create(slug){
+ function create(slug,readOnly=false){
   const address=typeof CONFIG==='object'?CONFIG.GAS_URL:null;
-  if(local||page.origin!==PAGE_HOST||page.pathname!==PAGE_PATH+'emergency-light.html'||window.top!==window||!approved(slug)||!sameEndpoint(address)){
+  const allowedPath=readOnly?[PAGE_PATH+'report/',PAGE_PATH+'report/index.html'].includes(page.pathname):page.pathname===PAGE_PATH+'emergency-light.html';
+  if(local||page.origin!==PAGE_HOST||!allowedPath||window.top!==window||!approved(slug)||!sameEndpoint(address)){
    return async()=>{throw Error(notAvailable);};
   }
   return async(method,args)=>{
    const write=postMethods.has(method), action=postMethods.get(method)||getMethods.get(method);
    const history=method==='listEmergencyLightAssetHistory';
    const count=write?3:history?2:1;
-   if(!action||!Array.isArray(args)||args.length!==count||args[0]!==ALARM_DEPTS[slug])throw Error('ไม่รองรับคำขอนี้');
+   if((readOnly&&write)||!action||!Array.isArray(args)||args.length!==count||args[0]!==ALARM_DEPTS[slug])throw Error('ไม่รองรับคำขอนี้');
    if(write){
     const payload=args[1],requestId=args[2];
     if(!isRecord(payload)||typeof requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9-]{15,79}$/.test(requestId))throw Error('ข้อมูลไม่ถูกต้อง กรุณาตรวจข้อมูลแล้วลองใหม่');
@@ -64,5 +65,5 @@
    return {status:'success',[key]:result[key].map(row=>pick(row,fields))};
   };
  }
- window.FireLightPublicApi=Object.freeze({create,isLocal:local});
+ window.FireLightPublicApi=Object.freeze({create:slug=>create(slug),createReport:slug=>create(slug,true),isLocal:local});
 })();
