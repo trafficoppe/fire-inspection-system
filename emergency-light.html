@@ -1,18 +1,22 @@
 <!doctype html>
 <html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; frame-src 'none'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; img-src 'self'; font-src 'self' https://fonts.gstatic.com; frame-src 'none'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>ทะเบียนโคมไฟฟ้าแสงสว่างฉุกเฉิน</title>
-<link rel="stylesheet" href="emergency-light.css?v=20261124-checked1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="emergency-light.css?v=20261125-bulk-pdf1">
 <script defer src="alarm-data.js"></script>
 <script defer src="config.js"></script>
 <script defer src="emergency-light.public-api.js?v=20261124-light-public1"></script>
 <script defer src="emergency-light.demo.js?v=20261124-light-public1"></script>
-<script defer src="emergency-light.pdf.js?v=20261125-asset-pdf1"></script>
-<script defer src="emergency-light.js?v=20261125-asset-pdf1"></script>
+<script defer src="emergency-light.pdf.js?v=20261125-bulk-pdf1"></script>
+<script defer src="emergency-light.js?v=20261125-bulk-pdf1"></script>
 </head><body><main><div class="main-card">
 <header><img class="alarm-logo" src="logo.png" alt="กองกายภาพและสิ่งแวดล้อม"><h1 id="department"></h1></header>
 <section id="inventory">
-<h2>รายการโคมไฟฟ้าแสงสว่างฉุกเฉิน</h2><nav class="nav-actions" aria-label="การจัดการทะเบียน"><a id="list-back" class="button-link" href="index.html">‹ กลับ</a><button id="add" type="button" disabled>+ เพิ่มไฟฉุกเฉิน</button></nav><div id="inventory-notice" class="note" aria-hidden="true"></div>
+<h2>รายการโคมไฟฟ้าแสงสว่างฉุกเฉิน</h2><nav class="nav-actions" aria-label="การจัดการทะเบียน"><a id="list-back" class="button-link" href="index.html">‹ กลับ</a><button id="add" type="button" disabled>+ เพิ่มไฟฉุกเฉิน</button></nav>
+<div class="inventory-export"><label for="inventory-pdf-year">ปี พ.ศ.</label><input id="inventory-pdf-year" type="number" inputmode="numeric" step="1" min="2500"><button id="inventory-pdf" type="button" disabled>ดาวน์โหลด PDF ทุกโคม</button></div>
+<p id="inventory-export-status" class="export-status" role="status" aria-live="polite"></p>
+<div id="inventory-notice" class="note" aria-hidden="true"></div>
 <button id="inventory-retry" class="retry-inventory" type="button" hidden>ลองใหม่อีกครั้ง</button>
 <div id="items"></div>
 </section>

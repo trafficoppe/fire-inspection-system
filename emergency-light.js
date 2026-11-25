@@ -68,7 +68,9 @@
  }
  function attempt(kind,data){const key=kind+'|'+JSON.stringify(data);if(!pending.has(key))pending.set(key,newId());return {key,id:pending.get(key)};}
  function formBusy(form,on){busy=on;form.querySelectorAll('button,input,textarea').forEach(el=>{el.disabled=on;});}
- function setReady(on){ready=on;$('add').disabled=!on;}
+ let exportBusy=false;
+ function updateExportButton(){$('inventory-pdf').disabled=!ready||!visibleItems.length||exportBusy;}
+ function setReady(on){ready=on;$('add').disabled=!on;updateExportButton();}
  function showRows(items){
   const fragment=document.createDocumentFragment(), now=Date.now(), recent=recentChecks(now);
   const unchecked=[], checked=[];
@@ -97,6 +99,40 @@
    if(!$('inventory').hidden&&!$('history').open&&!busy&&ready)showRows(visibleItems);
   },Math.max(1,refreshAt-Date.now()));
  }
+ async function exportInventory(){
+  if(!ready||!visibleItems.length||exportBusy)return;
+  const status=$('inventory-export-status'), value=$('inventory-pdf-year');
+  if(!value.reportValidity())return;
+  const year=Number(value.value)-543, assets=visibleItems.slice(), hasChanged=()=>context!==generation;
+  const context=generation;
+  if(!Number.isInteger(year)||year<1957||year>Number(today().slice(0,4))){status.textContent='กรุณาระบุปี พ.ศ. ให้ถูกต้อง';return;}
+  exportBusy=true;value.disabled=true;updateExportButton();status.textContent='กำลังอ่านประวัติ 0/'+assets.length+' โคม…';
+  const entries=new Array(assets.length);let next=0,completed=0,failed=false;
+  async function worker(){
+   while(!failed&&!hasChanged()&&next<assets.length){
+    const i=next++,asset=assets[i];
+    try{
+     const data=await rpc('listEmergencyLightAssetHistory',dept,asset.assetId);
+     if(data?.status!=='success'||!Array.isArray(data.rows)||!data.rows.every(recordOK))throw Error('history');
+     entries[i]={asset,rows:data.rows};
+     if(!hasChanged())status.textContent='กำลังอ่านประวัติ '+(++completed)+'/'+assets.length+' โคม…';
+    }catch(_){failed=true;}
+   }
+  }
+  try{
+   await Promise.all(Array.from({length:Math.min(3,assets.length)},worker));
+   if(hasChanged()){status.textContent='';return;}
+   if(failed){status.textContent='อ่านประวัติบางโคมไม่สำเร็จ ยังไม่ได้ดาวน์โหลดไฟล์เพื่อให้รายงานไม่ตกหล่น กรุณาลองใหม่';return;}
+   status.textContent='กำลังจัดทำ PDF '+assets.length+' หน้า…';
+   const saved=await window.FireLightPdf.downloadAll(entries,dept,year,()=>!hasChanged());
+   status.textContent=saved?'ดาวน์โหลด PDF ครบ '+assets.length+' โคมแล้ว':'';
+  }catch(_){if(!hasChanged())status.textContent='สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่';}
+  finally{exportBusy=false;value.disabled=false;updateExportButton();}
+ }
+ $('inventory-pdf').addEventListener('click',exportInventory);
+ const exportYear=Number(today().slice(0,4))+543;
+ $('inventory-pdf-year').value=exportYear;$('inventory-pdf-year').max=exportYear;
+
  async function load(success){
   if(!dept||busy)return;
   selected=null;pick('inventory');const n=generation;setReady(false);$('items').replaceChildren();

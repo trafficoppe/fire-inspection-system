@@ -3,19 +3,23 @@
  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
  const normal='ปกติ', mark=' | ชั้นที่ติดตั้ง: ';
  const ascii=value=>new TextEncoder().encode(value);
- function pdfBlob(jpeg,width,height){
+ function pdfBlob(pages){
   const chunks=[], offsets=[0];let length=0;
   const add=value=>{const bytes=typeof value==='string'?ascii(value):value;chunks.push(bytes);length+=bytes.byteLength;};
   const obj=(id,...parts)=>{offsets[id]=length;add(id+' 0 obj\n');parts.forEach(add);add('\nendobj\n');};
   add('%PDF-1.4\n');
   obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
-  obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-  obj(3,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
-  obj(4,'<< /Type /XObject /Subtype /Image /Width '+width+' /Height '+height+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpeg.byteLength+' >>\nstream\n',jpeg,'\nendstream');
-  const stream='q\n595.28 0 0 841.89 0 0 cm\n/Im0 Do\nQ\n';
-  obj(5,'<< /Length '+stream.length+' >>\nstream\n'+stream+'endstream');
-  const xref=length;
-  add('xref\n0 6\n0000000000 65535 f \n'+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF\n');
+  const pageIds=pages.map((_,i)=>3+i*3);
+  obj(2,'<< /Type /Pages /Kids ['+pageIds.map(id=>id+' 0 R').join(' ')+'] /Count '+pages.length+' >>');
+  for(const [i,{jpeg,width,height}] of pages.entries()){
+   const id=pageIds[i];
+   obj(id,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 '+(id+1)+' 0 R >> >> /Contents '+(id+2)+' 0 R >>');
+   obj(id+1,'<< /Type /XObject /Subtype /Image /Width '+width+' /Height '+height+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpeg.byteLength+' >>\nstream\n',jpeg,'\nendstream');
+   const stream='q\n595.28 0 0 841.89 0 0 cm\n/Im0 Do\nQ\n';
+   obj(id+2,'<< /Length '+stream.length+' >>\nstream\n'+stream+'endstream');
+  }
+  const xref=length,total=offsets.length;
+  add('xref\n0 '+total+'\n0000000000 65535 f \n'+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size '+total+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF\n');
   return new Blob(chunks,{type:'application/pdf'});
  }
  const logo=new Image();logo.src='report/logo-MU.png';
@@ -73,13 +77,28 @@
   const jpeg=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.96));
   if(!jpeg)throw Error('ไม่สามารถสร้าง PDF บนอุปกรณ์นี้');
   const safe=String(asset.assetNo).replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_');
-  return {blob:pdfBlob(new Uint8Array(await jpeg.arrayBuffer()),canvas.width,canvas.height),name:'ตรวจไฟฉุกเฉิน-'+safe+'-พ.ศ.'+(year+543)+'.pdf'};
+  return {page:{jpeg:new Uint8Array(await jpeg.arrayBuffer()),width:canvas.width,height:canvas.height},name:'ตรวจไฟฉุกเฉิน-'+safe+'-พ.ศ.'+(year+543)+'.pdf'};
  }
- async function download(asset,department,year,rows){
-  const {blob,name}=await report(asset,department,year,rows);
+ function savePdf(blob,name){
   const url=URL.createObjectURL(blob), a=document.createElement('a');
   a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
  }
- window.FireLightPdf={download};
+ async function download(asset,department,year,rows){
+  const {page,name}=await report(asset,department,year,rows);
+  savePdf(pdfBlob([page]),name);
+ }
+ async function downloadAll(entries,department,year,canSave=()=>true){
+  if(!Array.isArray(entries)||!entries.length)throw Error('ไม่มีโคมไฟฉุกเฉินในทะเบียน');
+  const pages=[];
+  for(const {asset,rows} of entries){
+   if(!canSave())return false;
+   pages.push((await report(asset,department,year,rows)).page);
+  }
+  if(!canSave())return false;
+  const safe=String(department).replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_');
+  savePdf(pdfBlob(pages),'ตรวจไฟฉุกเฉิน-ทุกโคม-'+safe+'-พ.ศ.'+(year+543)+'.pdf');
+  return true;
+ }
+ window.FireLightPdf={download,downloadAll};
 })();
 
