@@ -1,45 +1,66 @@
 'use strict';
-// Route remains off until an approved signed-in read endpoint is configured and verified.
-const emergencyReportEmptyMessage='ยังไม่เชื่อมช่องทางอ่านผลตรวจสำหรับผู้ได้รับอนุญาต ไม่สามารถสรุปได้ว่าไม่มีข้อมูล';
 function emergencyReportState(message){
- document.getElementById('emergencyLightReportStatus').textContent=message;
+ const status=document.getElementById('emergencyLightReportStatus');
+ status.textContent=message;
  document.getElementById('emergencyLightReportRows').replaceChildren();
 }
-function renderEmergencyLightRows(rows){
- if(!rows.length){emergencyReportState('ไม่พบรายการตรวจโคมไฟฟ้าแสงสว่างฉุกเฉินในเดือนและหน่วยงานที่เลือก');return;}
- const body=document.getElementById('emergencyLightReportRows');body.replaceChildren();
- document.getElementById('emergencyLightReportStatus').textContent='พบผลตรวจ '+rows.length+' รายการ';
- rows.forEach(row=>{
-  const tr=document.createElement('tr');
-  const d=String(row.inspectionDate||'');
-  const displayDate=/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(d)?thaiReportDate.format(new Date(d+'T00:00:00Z')):'—';
-  [displayDate,row.department,row.location,row.floor,row.testStatus,row.batteryStatus,row.inspectorName,row.note].forEach(value=>{
-   const td=document.createElement('td');td.textContent=String(value??'').trim()||'—';tr.append(td);
-  });
-  body.append(tr);
- });
+function renderEmergencyLightSummary(total,ready,notReady,note){
+ emergencyReportState(note);
+ const row=document.createElement('tr'), label=document.createElement('th');
+ label.scope='row';label.textContent='ไฟฉุกเฉิน';row.append(label);
+ for(const value of [total,ready,notReady]){
+  const cell=document.createElement('td');cell.textContent=value==null?'—':String(value);row.append(cell);
+ }
+ document.getElementById('emergencyLightReportRows').append(row);
+}
+function summarizeEmergencyLightMonth(history,month){
+ const statuses=['ปกติ','ไม่ปกติ'];
+ let date='',outcome=null,conflict=false;
+ for(const row of history){
+  if(!row||typeof row.inspectionDate!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(row.inspectionDate))throw Error('invalid inspection date');
+  const d=new Date(row.inspectionDate+'T00:00:00Z');
+  if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==row.inspectionDate)throw Error('invalid inspection date');
+  if(row.inspectionDate.slice(0,7)!==month)continue;
+  const next=[row.testStatus,row.batteryStatus].every(v=>statuses.includes(v))?(row.testStatus==='ปกติ'&&row.batteryStatus==='ปกติ'?'ready':'notReady'):null;
+  if(row.inspectionDate>date){date=row.inspectionDate;outcome=next;conflict=false;}
+  else if(row.inspectionDate===date&&outcome!==next)conflict=true;
+ }
+ return conflict?null:outcome;
 }
 async function loadEmergencyLightReport(month,scope,isCurrent){
- const configured=typeof EMERGENCY_LIGHT_REPORT_URL==='string'?EMERGENCY_LIGHT_REPORT_URL.trim():'';
- if(!configured){emergencyReportState(emergencyReportEmptyMessage);return;}
- emergencyReportState('กำลังอ่านผลตรวจโคมไฟฟ้าแสงสว่างฉุกเฉิน…');
- let timer;
+ emergencyReportState('กำลังอ่านทะเบียนและผลตรวจโคมไฟฉุกเฉิน…');
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)){renderEmergencyLightSummary(null,null,null,'เดือนรายงานไม่ถูกต้อง');return;}
+ if(!window.FireLightPublicApi?.createReport||typeof ALARM_DEPTS!=='object'){renderEmergencyLightSummary(null,null,null,'ยังเชื่อมทะเบียนโคมไฟฉุกเฉินไม่ได้');return;}
+ const groups=Object.entries(ALARM_DEPTS).filter(([slug,name])=>!scope||FireReport.includes(scope,name));
+ if(!groups.length){renderEmergencyLightSummary(null,null,null,'ยังไม่พบหน่วยงานที่ตรงกับทะเบียนโคมไฟฉุกเฉิน');return;}
+ let total=null;
+ const work=async(input,run)=>{
+  let next=0,failed=false;const output=new Array(input.length);
+  await Promise.all(Array.from({length:Math.min(input.length,4)},async()=>{
+   while(!failed&&isCurrent()&&next<input.length){const index=next++;try{output[index]=await run(input[index]);}catch(_){failed=true;}}
+  }));
+  if(failed)throw Error('source unavailable');return output;
+ };
  try{
-  const url=new URL(configured);
-  if(url.protocol!=='https:'||url.hostname!=='script.google.com')throw Error('ปลายทางการอ่านข้อมูลไม่ถูกต้อง');
-  url.searchParams.set('action','get_emergency_light_report');
-  url.searchParams.set('month',month);
-  if(scope)url.searchParams.set('scope',scope);
-  const controller=new AbortController();
-  timer=setTimeout(()=>controller.abort(),8000);
-  const response=await fetch(url,{credentials:'include',cache:'no-store',signal:controller.signal});
-  if(!response.ok)throw Error('อ่านข้อมูลไม่สำเร็จ');
-  const data=await response.json();
+  const registries=await work(groups,async([slug,name])=>{
+   const call=window.FireLightPublicApi.createReport(slug),data=await call('listEmergencyLightAssets',[name]);
+   if(data?.status!=='success'||!Array.isArray(data.items))throw Error('inventory unavailable');
+   const ids=new Set();
+   return data.items.map(asset=>{
+    if(typeof asset?.assetId!=='string'||!asset.assetId||ids.has(asset.assetId))throw Error('asset identity');
+    ids.add(asset.assetId);return {call,name,id:asset.assetId};
+   });
+  });
   if(!isCurrent())return;
-  if(data.status==='unauthorized'){emergencyReportState('บัญชีนี้ยังไม่ได้รับสิทธิ์อ่านผลตรวจโคมไฟฟ้าแสงสว่างฉุกเฉิน');return;}
-  if(data.status!=='success'||!Array.isArray(data.rows))throw Error('รูปแบบข้อมูลไม่ถูกต้อง');
-  const rows=scope===FireReport.utilityScope?data.rows.filter(row=>row&&FireReport.includes(scope,String(row.department??'').trim())):data.rows;
-  renderEmergencyLightRows(rows);
- }catch(error){if(isCurrent())emergencyReportState('ยังอ่านผลตรวจโคมไฟฟ้าแสงสว่างฉุกเฉินไม่ได้ โปรดตรวจการเชื่อมต่อและสิทธิ์ ไม่ใช่สถานะไม่มีผลตรวจ');}
- finally{clearTimeout(timer);}
+  const assets=registries.flat();total=assets.length;
+  const outcomes=await work(assets,async ({call,name,id})=>{
+   const data=await call('listEmergencyLightAssetHistory',[name,id]);
+   if(data?.status!=='success'||!Array.isArray(data.rows))throw Error('history unavailable');
+   return summarizeEmergencyLightMonth(data.rows,month);
+  });
+  if(!isCurrent())return;
+  const ready=outcomes.filter(v=>v==='ready').length,notReady=outcomes.filter(v=>v==='notReady').length;
+  const remaining=total-ready-notReady;
+  renderEmergencyLightSummary(total,ready,notReady,'จำนวนอ้างอิงทะเบียนปัจจุบัน สถานะใช้ผลตรวจล่าสุดในเดือนที่เลือก'+(remaining?' • ยังไม่มีผลที่ยืนยันได้ '+remaining+' โคม':'')+(total===0?' • ไม่พบโคมในทะเบียนของขอบเขตที่เลือก':''));
+ }catch(_){if(isCurrent())renderEmergencyLightSummary(total,null,null,total==null?'อ่านทะเบียนบางหน่วยงานไม่สำเร็จ จึงยังสรุปยอดไม่ได้':'อ่านผลตรวจไม่ครบ จึงยังไม่แสดงยอดพร้อมใช้งานและไม่พร้อมใช้งาน');}
 }

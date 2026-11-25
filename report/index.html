@@ -98,7 +98,7 @@
       <div class="table-title">ตารางที่ 2 ผลการตรวจโคมไฟฟ้าแสงสว่างฉุกเฉิน</div>
       <p id="emergencyLightReportStatus" role="status"></p>
       <table class="doc-table doc-table-sec" id="emergencyLightReportTable">
-        <thead><tr><th>วันที่ตรวจ</th><th>หน่วยงาน</th><th>จุดติดตั้ง</th><th>ชั้น</th><th>ทดสอบการทำงาน</th><th>แบตเตอรี่</th><th>ผู้ตรวจสอบ</th><th>หมายเหตุ</th></tr></thead>
+        <thead><tr><th scope="col">รายการ</th><th scope="col">จำนวน</th><th scope="col">พร้อมใช้งาน</th><th scope="col">ไม่พร้อมใช้งาน</th></tr></thead>
         <tbody id="emergencyLightReportRows"></tbody>
       </table>
     </section>
@@ -125,7 +125,9 @@
   </div>
   <script src="../sheet-reader.js"></script><script src="config.js"></script><script src="../config.js"></script> 
   <script src="report-model.js?v=3-buildings-dept-scope-20261124"></script>
-  <script src="emergency-light-report.js?v=3-buildings-20261124"></script>
+  <script src="../alarm-data.js"></script>
+  <script src="../emergency-light.public-api.js?v=20261125-report1"></script>
+  <script src="emergency-light-report.js?v=20261125-summary1"></script>
   <script src="script.js?v=3-buildings-20261124"></script>
 </body>
 </html>
