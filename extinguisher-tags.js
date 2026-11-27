@@ -56,10 +56,22 @@
   const ctx=canvas.getContext('2d');if(!ctx)throw Error('canvas');
   ctx.scale(canvas.width/595.28,canvas.height/841.89);
   ctx.fillStyle='#fff';ctx.fillRect(0,0,595.28,841.89);
-  ctx.fillStyle=ctx.strokeStyle='#15242d';ctx.lineWidth=.65;ctx.textBaseline='middle';
+  const ink='#15242d';
+  ctx.fillStyle=ctx.strokeStyle=ink;ctx.lineWidth=.65;ctx.textBaseline='middle';
   const write=(v,x,y,size=15,maxWidth=530,align='center')=>{ctx.font=size+'px FireTagSarabun';ctx.textAlign=align;ctx.fillText(txt(v),x,y,maxWidth);};
   const line=(a,b,c,d)=>{ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(c,d);ctx.stroke();};
-  const drawMark=(ok,x,y)=>{ctx.font='14px Arial, sans-serif';ctx.textAlign='center';ctx.fillStyle=ok?'#14643d':'#a12631';ctx.fillText(ok?'✓':'✗',x,y);ctx.fillStyle='#15242d';};
+  const drawMark=(ok,x,y)=>{
+   ctx.save();
+   ctx.strokeStyle=ink;ctx.lineWidth=1.05;ctx.lineCap='round';ctx.lineJoin='round';
+   ctx.beginPath();
+   if(ok){
+    ctx.moveTo(x-3.45,y+.15);ctx.lineTo(x-.95,y+2.65);ctx.lineTo(x+3.45,y-2.65);
+   }else{
+    ctx.moveTo(x-2.65,y-2.65);ctx.lineTo(x+2.65,y+2.65);
+    ctx.moveTo(x+2.65,y-2.65);ctx.lineTo(x-2.65,y+2.65);
+   }
+   ctx.stroke();ctx.restore();
+  };
   ctx.drawImage(logo,(595.28-60)/2,25,60,60);
   write('แบบฟอร์มตรวจสอบเครื่องดับเพลิง',297.64,99,22);
   write('(Fire Extinguisher Portable Check List Form)',297.64,121,17);
