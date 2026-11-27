@@ -127,16 +127,29 @@
   const jpeg=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.94));if(!jpeg)throw Error('jpeg');
   return {jpeg:new Uint8Array(await jpeg.arrayBuffer()),width:canvas.width,height:canvas.height};
  }
- async function download(){
-  if(running||!state?.rows.length)return;
+ async function download(recordKey=null,cardButton=null){
+  if(running)return;
+  if(!state?.rows.length){message.textContent='กรุณารอให้ทะเบียนถังโหลดเสร็จก่อนดาวน์โหลด';return;}
   const selected=state,year=Number(picker.value)-543;
+  const matches=recordKey===null?[]:selected.rows.map((row,i)=>row._recordKey===recordKey?i:-1).filter(i=>i>=0);
+  if(recordKey!==null&&(typeof recordKey!=='string'||!recordKey||matches.length!==1)){
+   message.textContent='ยืนยันถังที่เลือกไม่ได้ กรุณาเปิดรายการใหม่';return;
+  }
   if(!picker.reportValidity()||!Number.isInteger(year)||year<1957||year>now){message.textContent='กรุณาระบุปี พ.ศ. ให้ถูกต้อง';return;}
   running=true;picker.disabled=true;refresh();message.textContent='กำลังอ่านผลตรวจถังดับเพลิง…';
+  if(cardButton){cardButton.disabled=true;cardButton.textContent='กำลังโหลด…';}
   try{
-   const logs=await FireSheet.read(INSPECTION_DATA_URL);
-   if(!Array.isArray(logs)||(logs.length&&!['หน่วยงาน','วันเวลาที่ตรวจ','เลขที่ถัง','สรุปผล'].every(k=>Object.hasOwn(logs[0],k))))throw Error('columns');
+   const rows=await FireSheet.read(INSPECTION_DATA_URL);
+   const recorded='วันเวลาที่ตรวจ', inspection='วันที่ตรวจ', legacy='Column 1';
+   if(!Array.isArray(rows)||(rows.length&&(!['หน่วยงาน','เลขที่ถัง','สรุปผล'].every(k=>Object.hasOwn(rows[0],k))||
+      ![recorded,inspection,legacy].some(k=>Object.hasOwn(rows[0],k)))))throw Error('columns');
+   // The existing inspection sheet calls its timestamp Column 1. Keep the actual
+   // selected inspection date authoritative and normalize only the recorded timestamp.
+   const logs=rows.map(row=>({...row,[recorded]:key(row[recorded])||key(row[legacy])}));
    if(state!==selected){message.textContent='ทะเบียนเปลี่ยน กรุณากดดาวน์โหลดใหม่';return;}
-   const tags=assign(selected.rows,logs,selected.department,year),pages=[];
+   // Resolve history against every tank to avoid false matches for repeated numbers.
+   const allTags=assign(selected.rows,logs,selected.department,year);
+   const tags=recordKey===null?allTags:[allTags[matches[0]]],pages=[];
    const warnings=tags.filter(tag=>tag.uncertain||tag.invalidDate||tag.months.some(m=>m?.conflict)).length;
    for(const tag of tags){
     if(state!==selected){message.textContent='ทะเบียนเปลี่ยน กรุณากดดาวน์โหลดใหม่';return;}
@@ -144,13 +157,19 @@
     pages.push(await draw(tag,selected.department,year));
    }
    if(state!==selected){message.textContent='ทะเบียนเปลี่ยน กรุณากดดาวน์โหลดใหม่';return;}
-   const safe=selected.department.replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_'),url=URL.createObjectURL(pdfBlob(pages));
+   const safePart=value=>value.replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_').slice(0,100);
+   const target=tags[0].asset;
+   const label=recordKey===null?'':'-ถัง-'+safePart(key(target['หมายเลขครุภัณฑ์'])||key(target['เลขที่ถัง'])||String(matches[0]+1));
+   const safe=safePart(selected.department)+label,url=URL.createObjectURL(pdfBlob(pages));
    const a=document.createElement('a');a.href=url;a.download='แท็กถังดับเพลิง-'+safe+'-พ.ศ.'+(year+543)+'.pdf';document.body.append(a);a.click();a.remove();
    setTimeout(()=>URL.revokeObjectURL(url),60000);
    message.textContent='จัดทำ PDF ครบ '+tags.length+' ถังแล้ว'+(warnings?' มี '+warnings+' ถังที่ระบุข้อควรตรวจสอบไว้ใน PDF':'');
   }catch(_){message.textContent='อ่านประวัติหรือสร้าง PDF ไม่สำเร็จ ยังไม่มีไฟล์ถูกดาวน์โหลด กรุณาลองใหม่';}
-  finally{running=false;picker.disabled=false;refresh();}
+  finally{
+   running=false;picker.disabled=false;refresh();
+   if(cardButton){cardButton.disabled=false;cardButton.textContent='PDF';}
+  }
  }
- button.addEventListener('click',download);
- window.FireTankTags={setInventory};
+ button.addEventListener('click',()=>download());
+ window.FireTankTags={setInventory,downloadOne:(recordKey,cardButton)=>download(recordKey,cardButton)};
 })();

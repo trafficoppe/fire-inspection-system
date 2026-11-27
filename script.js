@@ -49,6 +49,10 @@ function openRecord(index) {
     if (!selectedRecord || selectedRecord._ambiguousAsset) return warnDuplicate();
     openForm(assetOf(selectedRecord), selectedRecord['สถานที่ติดตั้ง'], '', assetOf(selectedRecord));
 }
+function downloadRecordPdf(index,button) {
+    const record=renderedRecords[index];
+    if (record?._recordKey) void window.FireTankTags?.downloadOne(record._recordKey,button);
+}
 function historyRecord(index) {
     const row = renderedRecords[index];
     if (!row || row._ambiguousAsset) return warnDuplicate();
@@ -252,7 +256,7 @@ function renderList(data, container, countBadge) {
                     <div class="tank-actions">
                         <button type="button" class="tank-button" onclick="event.stopPropagation(); refillRecord(${recordIndex})">เติมน้ำยา</button>
                         <button type="button" class="tank-button" onclick="event.stopPropagation(); historyRecord(${recordIndex})">ประวัติการตรวจ</button>
-                        <button type="button" class="tank-button tank-primary" onclick="event.stopPropagation(); openRecord(${recordIndex})">ตรวจ</button>
+                        <button type="button" class="tank-button tank-primary" aria-label="ดาวน์โหลด PDF เฉพาะถังนี้" onclick="event.stopPropagation(); downloadRecordPdf(${recordIndex},this)">PDF</button>
                     </div>
                 </div>
             </article>
