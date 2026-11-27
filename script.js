@@ -377,6 +377,40 @@ function setupForm() {
     });
 }
 
+// The PDF and the on-screen history use the same scoped query and month selection.
+const fireMonthLabels = Object.freeze(['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']);
+async function readTankHistory(assetCode, department) {
+    if (!assetCode || !department) throw Error('ไม่พบรหัสถังหรือหน่วยงาน');
+    const url = new URL(CONFIG.GAS_URL);
+    url.search = new URLSearchParams({action:'get_log', assetCode, department});
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+        const response = await fetch(url,{signal:controller.signal,cache:'no-store'});
+        if (!response.ok) throw Error('โหลดประวัติถังไม่ได้');
+        const raw = await response.json();
+        if (!Array.isArray(raw)) throw Error('โหลดประวัติถังไม่ได้');
+        return raw.filter(row => row && extinguisherKey(row.department) === department);
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+function selectTankMonths(logs, limitYear) {
+    const years = new Map();
+    let invalidDate = false;
+    for (const log of logs) {
+        const selected = String(log.inspectionDate ?? '').trim();
+        const day = FireReport.date(selected || log.timestamp);
+        if (!day) { invalidDate = true; continue; }
+        const year = day.getFullYear(), month = day.getMonth();
+        if (year > limitYear) continue;
+        const stamp = FireReport.date(log.timestamp)?.getTime() ?? -Infinity;
+        if (!years.has(year)) years.set(year, new Map());
+        const entries = years.get(year), old = entries.get(month), time = day.getTime();
+        if (!old || time > old.time || (time === old.time && stamp > old.stamp)) entries.set(month,{log,time,stamp});
+    }
+    return {years,invalidDate};
+}
+const fireMonthText = (index, year) => fireMonthLabels[index]+String(year+543).slice(-2);
 let historyRequest = 0;
 async function showHistoryModal(assetCode, department) {
     const request = ++historyRequest;
@@ -396,13 +430,8 @@ async function showHistoryModal(assetCode, department) {
     myModal.show();
 
     try {
-        const url = new URL(CONFIG.GAS_URL);
-        url.search = new URLSearchParams({action:'get_log', assetCode, department});
-        const response = await fetch(url);
-        const raw = await response.json();
-        if (!response.ok || !Array.isArray(raw)) throw Error('โหลดประวัติถังไม่ได้');
+        const logs = await readTankHistory(assetCode, department);
         if (request !== historyRequest) return;
-        const logs = raw.filter(row => row && extinguisherKey(row.department) === department);
 
         let tableHTML = `
             <div class="table-responsive border rounded">
@@ -426,26 +455,19 @@ async function showHistoryModal(assetCode, department) {
                     <tbody>
         `;
 
-        const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
         const todayYear = Number(inspectionToday().slice(0,4));
-        const years = new Map();
-        for (const log of logs) {
-            const day = FireReport.date(log.inspectionDate || log.timestamp);
-            if (!day || day.getFullYear() > todayYear) continue;
-            const year = day.getFullYear(), month = day.getMonth();
-            const stamp = FireReport.date(log.timestamp)?.getTime() ?? -Infinity;
-            if (!years.has(year)) years.set(year, new Map());
-            const entries = years.get(year), old = entries.get(month), time = day.getTime();
-            if (!old || time > old.time || (time === old.time && stamp > old.stamp)) entries.set(month,{log,time,stamp});
-        }
+        const {years} = selectTankMonths(logs,todayYear);
         const available = [...new Set([todayYear, todayYear - 1, ...years.keys()])].sort((a,b)=>b-a);
         for (const year of available) picker.add(new Option(String(year+543),String(year)));
-        picker.value = String(todayYear);
+        const pdfYearPicker = document.getElementById('fire-tags-year');
+        const pdfYear = Number(pdfYearPicker?.value)-543;
+        picker.value = available.includes(pdfYear) ? String(pdfYear) : String(todayYear);
         picker.onchange = () => {
             const year = Number(picker.value), latest = years.get(year) || new Map();
+            if (pdfYearPicker && !pdfYearPicker.disabled) pdfYearPicker.value = String(year+543);
             let result = tableHTML;
             message.textContent = latest.size ? '' : 'ไม่พบผลตรวจในปี พ.ศ. ' + (year+543);
-        months.forEach((month, index) => {
+        fireMonthLabels.forEach((_, index) => {
             const logEntry = latest.get(index)?.log;
 
             if (logEntry) {
@@ -456,7 +478,7 @@ async function showHistoryModal(assetCode, department) {
 
                  result += `
                     <tr class="${rowClass}">
-                        <td style="font-weight: normal; padding: 6px 4px;">${month} ${String(year + 543).slice(-2)}</td>
+                        <td style="font-weight: normal; padding: 6px 4px;">${fireMonthText(index, year)}</td>
                         <td style="padding: 6px 4px;">${String(logEntry.checkBody ?? "").trim() === "ปกติ" ? tick : cross}</td>
                         <td style="padding: 6px 4px;">${String(logEntry.checkPressure ?? "").trim() === "ปกติ" ? tick : cross}</td>
                         <td style="padding: 6px 4px;">${String(logEntry.checkHose ?? "").trim() === "ปกติ" ? tick : cross}</td>
@@ -474,7 +496,7 @@ async function showHistoryModal(assetCode, department) {
             } else {
                  result += `
                     <tr>
-                        <td style="font-weight: normal; padding: 6px 4px;">${month} ${String(year + 543).slice(-2)}</td>
+                        <td style="font-weight: normal; padding: 6px 4px;">${fireMonthText(index, year)}</td>
                         <td style="color: #6c757d; padding: 6px 4px;">-</td>
                         <td style="color: #6c757d; padding: 6px 4px;">-</td>
                         <td style="color: #6c757d; padding: 6px 4px;">-</td>

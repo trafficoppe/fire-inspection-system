@@ -23,8 +23,7 @@
  const $=id=>document.getElementById(id), button=$('fire-tags-pdf'),picker=$('fire-tags-year'),message=$('fire-tags-status');
  const now=Number(new Intl.DateTimeFormat('en',{timeZone:'Asia/Bangkok',year:'numeric'}).format(new Date()));
  picker.value=picker.max=now+543;
- const month=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
- const checks=['สภาพถัง','สายฉีด','คันบีบ','สลักและซีล','แรงดัน','น้ำหนัก','สิ่งกีดขวาง'];
+ const checks=['checkBody','checkHose','checkLever','checkPin','checkPressure','checkWeight','checkObstruction'];
  const txt=v=>String(v??'').trim(),key=v=>{const s=txt(v);return !s||s==='-'||s.toLowerCase()==='null'?'':s;};
  let state=null,running=false;
  const refresh=()=>{button.disabled=!state?.rows.length||running;};
@@ -32,29 +31,21 @@
   state=Array.isArray(rows)?{rows:rows.slice(),department:DEPT_NAME}:null;
   refresh();
  }
- function assign(inv,logs,department,year){
-  const canonical=new Map(),alias=new Map(),add=(m,k,i)=>{if(!k)return;if(!m.has(k))m.set(k,new Set());m.get(k).add(i);};
-  const tags=inv.map((asset,i)=>{
-   const code=key(asset['หมายเลขครุภัณฑ์']),n=key(asset['เลขที่ถัง']);
-   add(canonical,code||n,i);add(alias,code,i);add(alias,n,i);
-   return {asset,months:Array(12).fill(null),uncertain:!!asset._ambiguousAsset,invalidDate:false};
-  });
-  for(const log of logs){
-   if(key(log['หน่วยงาน'])!==department)continue;
-   const explicit=key(log['รหัสครุภัณฑ์']),code=explicit||key(log['เลขที่ถัง']);
-   if(!code)continue;
-   const ids=(explicit?canonical:alias).get(code);
-   if(!ids?.size)continue;
-   const d=FireReport.inspectionDay(log);
-   if(d&&d.getFullYear()!==year)continue;
-   if(ids.size!==1){for(const idx of ids)tags[idx].uncertain=true;continue;}
-   const tag=tags[[...ids][0]];
-   if(tag.uncertain)continue;
-   if(!d){tag.invalidDate=true;continue;}
-   const i=d.getMonth(),prev=tag.months[i],time=d.getTime(),recorded=FireReport.inspectionRecordedTime(log);
-   if(!prev||time>prev.time||(time===prev.time&&recorded>prev.recorded))tag.months[i]={time,recorded,d,log,conflict:false};
-   else if(time===prev.time&&recorded===prev.recorded&&JSON.stringify(log)!==JSON.stringify(prev.log))prev.conflict=true;
-  }
+ async function fetchTags(rows,department,year,canContinue){
+  const tags=Array(rows.length);
+  let next=0, stopped=false;
+  await Promise.all(Array.from({length:Math.min(rows.length,4)},async()=>{
+   while(!stopped&&next<rows.length){
+    if(!canContinue())throw Error('stale inventory');
+    const i=next++,asset=rows[i],code=assetOf(asset);
+    const uncertain=!!asset._ambiguousAsset||!code||key(asset['หน่วยงาน'])!==department;
+    if(uncertain){tags[i]={asset,months:new Map(),uncertain,invalidDate:false};continue;}
+    try{
+     const {years,invalidDate}=selectTankMonths(await readTankHistory(code,department),year);
+     tags[i]={asset,months:years.get(year)||new Map(),uncertain,invalidDate};
+    }catch(e){stopped=true;throw e;}
+   }
+  }));
   return tags;
  }
  const logo=new Image();logo.src='report/logo-MU.png';let font;
@@ -90,20 +81,20 @@
   meta('โซน (Zone)',tank['โซน'],144,split,(meta2+head)/2);
   meta('ชนิดถังดับเพลิง (Fire Extinguisher Type)',tank['ชนิด'],split,right,(meta2+head)/2);
   const mid=i=>(x[i]+x[i+1])/2;
-  write('ว/ด/ป',mid(0),(head+body)/2,17);
+  write('ด/ป',mid(0),(head+body)/2,17);
   write('รายละเอียดการตรวจสอบ',(x[1]+x[8])/2,(head+head2)/2,17);
   write('ผู้ตรวจเช็ค',mid(8),(head+body)/2,17);
   ['ตัวถัง','สายฉีด','คันบีบ','เซฟตี้','แรงดัน','น้ำหนัก','สิ่งกีดขวาง'].forEach((v,i)=>write(v,mid(i+1),(head2+body)/2,16,x[i+2]-x[i+1]-5));
-  month.forEach((label,i)=>{
-   const y=body+i*rh+rh/2,m=tag.uncertain?null:tag.months[i];
-   write(m&&!m.conflict?m.d.getDate()+' '+label+' '+(year+543):'… '+label+' …',mid(0),y,16,69);
-   if(!m||m.conflict)return;
+  fireMonthLabels.forEach((_,i)=>{
+   const y=body+i*rh+rh/2,m=tag.months.get(i);
+   write(fireMonthText(i,year),mid(0),y,16,69);
+   if(!m)return;
    checks.forEach((n,j)=>write(check(m.log[n]),mid(j+1),y,15,x[j+2]-x[j+1]-6));
-   write(m.log['ผู้ตรวจ'],mid(8),y,16,x[9]-x[8]-8);
+   write(m.log.inspectorName,mid(8),y,16,x[9]-x[8]-8);
   });
   let note='';
   if(tag.uncertain)note='ยังยืนยันการจับคู่ถังกับผลตรวจไม่ได้ จึงไม่แสดงผลตรวจในตาราง';
-  else if(tag.invalidDate||tag.months.some(m=>m?.conflict))note='ผลตรวจบางรายการมีวันที่ไม่ชัดเจนหรือข้อมูลขัดกัน จึงเว้นช่องที่ยืนยันไม่ได้';
+  else if(tag.invalidDate)note='ผลตรวจบางรายการมีวันที่ไม่ชัดเจน จึงเว้นช่องที่ยืนยันไม่ได้';
   if(note)write(note,left,162,15,width,'left');
   const guide=[
    ['ตรวจเช็คตัวถังดับเพลิงและเช็ดทำความสะอาด','ตัวถังดับเพลิงอยู่ในสภาพปกติ ไม่แตกหรือขึ้นสนิม'],
@@ -139,18 +130,9 @@
   running=true;picker.disabled=true;refresh();message.textContent='กำลังอ่านผลตรวจถังดับเพลิง…';
   if(cardButton){cardButton.disabled=true;cardButton.textContent='กำลังโหลด…';}
   try{
-   const rows=await FireSheet.read(INSPECTION_DATA_URL);
-   const recorded='วันเวลาที่ตรวจ', inspection='วันที่ตรวจ', legacy='Column 1';
-   if(!Array.isArray(rows)||(rows.length&&(!['หน่วยงาน','เลขที่ถัง','สรุปผล'].every(k=>Object.hasOwn(rows[0],k))||
-      ![recorded,inspection,legacy].some(k=>Object.hasOwn(rows[0],k)))))throw Error('columns');
-   // The existing inspection sheet calls its timestamp Column 1. Keep the actual
-   // selected inspection date authoritative and normalize only the recorded timestamp.
-   const logs=rows.map(row=>({...row,[recorded]:key(row[recorded])||key(row[legacy])}));
-   if(state!==selected){message.textContent='ทะเบียนเปลี่ยน กรุณากดดาวน์โหลดใหม่';return;}
-   // Resolve history against every tank to avoid false matches for repeated numbers.
-   const allTags=assign(selected.rows,logs,selected.department,year);
-   const tags=recordKey===null?allTags:[allTags[matches[0]]],pages=[];
-   const warnings=tags.filter(tag=>tag.uncertain||tag.invalidDate||tag.months.some(m=>m?.conflict)).length;
+   const chosen=recordKey===null?selected.rows:[selected.rows[matches[0]]];
+   const tags=await fetchTags(chosen,selected.department,year,()=>state===selected),pages=[];
+   const warnings=tags.filter(tag=>tag.uncertain||tag.invalidDate).length;
    for(const tag of tags){
     if(state!==selected){message.textContent='ทะเบียนเปลี่ยน กรุณากดดาวน์โหลดใหม่';return;}
     message.textContent='กำลังสร้างแท็ก '+(pages.length+1)+'/'+tags.length+' ถัง…';
